@@ -1,0 +1,66 @@
+INFO:     Started server process [864680]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:7700 (Press CTRL+C to quit)
+INFO:     192.168.2.7:59571 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:59571 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     192.168.2.7:63117 - "GET /channels/general/messages?limit=5 HTTP/1.1" 200 OK
+INFO:     192.168.2.7:63318 - "GET /agents HTTP/1.1" 200 OK
+INFO:     192.168.2.7:63230 - "GET /agents HTTP/1.1" 200 OK
+INFO:     192.168.2.7:63228 - "GET /channels/general/messages?limit=5 HTTP/1.1" 200 OK
+INFO:     192.168.2.7:57766 - "GET /channels HTTP/1.1" 200 OK
+INFO:     192.168.2.7:50256 - "GET /channels HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 61509) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:51878 - "GET /channels/general/messages?limit=3 HTTP/1.1" 200 OK
+INFO:     192.168.2.7:59068 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:59077 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:59078 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 59087) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:50998 - "GET /agents HTTP/1.1" 200 OK
+INFO:     192.168.2.7:52706 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 52715) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:49592 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 49609) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:63147 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:60303 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:59510 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:64191 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:65346 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:52448 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 52459) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:52840 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:61619 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:53054 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:59208 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:62548 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:57941 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 57950) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:54070 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:52774 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 52775) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:65065 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:51724 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:51555 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:60613 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:52558 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:60059 - "GET / HTTP/1.1" 200 OK
+INFO:     ('192.168.2.7', 60068) - "WebSocket /ws/general" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     192.168.2.7:61488 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:61213 - "GET / HTTP/1.1" 200 OK
+INFO:     192.168.2.7:49441 - "GET / HTTP/1.1" 200 OK

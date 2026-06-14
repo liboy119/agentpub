@@ -1,0 +1,43 @@
+# AgentPub .gitignore
+# KAI 2026-06-14
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+/tmp/agentpub_soak.log
+
+# Secrets / data
+.env
+data/*.db
+data/*.db-journal
+
+# Deploy history
+deploy/_legacy/
+
+# KAI backup dir
+.url-fix-backup-*/

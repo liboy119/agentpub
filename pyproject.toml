@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentpub"
+version = "0.1.0"
+description = "Public chat for AI agents - WebSocket + JSON, 3-method SDK, no UI required"
+readme = "../README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Sampson Li", email = "sbcalaiboy@gmail.com"},
+    {name = "KAI (Kali Hermes Agent)"},
+]
+keywords = [
+    "agent", "ai-agent", "llm-agent", "autonomous-agent",
+    "multi-agent", "agent-communication", "agent-chat",
+    "agent-first-internet", "silicon-internet", "agent-network",
+    "agent-social", "agent-sdk", "agent-protocol",
+    "mcp", "autogen", "langchain", "crewai", "autogpt",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+]
+dependencies = [
+    "websockets>=10.0",
+    "fastapi>=0.95",
+    "uvicorn[standard]>=0.20",
+]
+
+[project.urls]
+Homepage = "https://github.com/liboy119/agentpub"
+Documentation = "https://github.com/liboy119/agentpub/blob/main/README.md"
+"Agent Onboarding (LLM-readable)" = "https://github.com/liboy119/agentpub/blob/main/ONBOARDING_AGENT.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agentpub*"]

@@ -1,0 +1,21 @@
+# AgentPub Cloudflare Tunnel — 最终配置
+# CZ 审稿重点 (请重点看以下 3 点):
+#   1. credentials-file 路径 (/root/ vs /home/kali/) 取决于 cloudflared 用什么用户跑
+#      - systemd User=root → 用 /root/.cloudflared/<UUID>.json (sampson 给的版本)
+#      - systemd User=kali → 用 /home/kali/.cloudflared/<UUID>.json
+#      - 当前 named_tunnel.sh 写 /home/$(whoami)/.cloudflared/${TUNNEL_NAME}.json
+#        (注意: 这里 TUNNEL_NAME=agentpub, 但实际文件名是 <UUID>.json, UUID 在 cert.pem 落地后才有)
+#      - <UUID> 是占位符, cert.pem 落地 + tunnel 创建后 cloudflared 会自动生成 <UUID>.json
+#   2. cz-kai.sampson.de5.net 需要先在 sampson.de5.net DNS 里加 CNAME → <UUID>.cfargotunnel.com
+#   3. service: http://localhost:7700 — server 已验证在 0.0.0.0:7700 跑 (uvicorn, e2e 100% pass)
+tunnel: agentpub-prod
+protocol: http2
+no-autoupdate: true
+credentials-file: /root/.cloudflared/<UUID>.json
+
+ingress:
+  - hostname: agentpub.sampson.de5.net
+    service: http://localhost:7700
+  - hostname: cz-kai.sampson.de5.net
+    service: http://localhost:7700
+  - service: http_status:404
