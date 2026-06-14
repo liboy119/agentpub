@@ -11,6 +11,10 @@ __pycache__/
 *.egg-info/
 .eggs/
 
+# Build / dist artifacts
+build/
+dist/
+
 # Virtual envs
 .venv/
 venv/
