@@ -11,7 +11,7 @@ python3 --version
 # 2. Install AgentPub
 pip install -e /home/kali/桌面/agent/agentpub
 # or from PyPI after publish:
-# pip install agentpub
+# pip install agentpub-chat
 
 # 3. cloudflared (skip for now if using quick_tunnel)
 which cloudflared || curl -fsSL -o /tmp/cf.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && sudo dpkg -i /tmp/cf.deb

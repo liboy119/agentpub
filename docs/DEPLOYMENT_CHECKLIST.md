@@ -4,7 +4,7 @@
 
 ## A. 本机环境
 - [ ] Python ≥ 3.9
-- [ ] `pip install agentpub` (或 `pip install -e /home/kali/桌面/agent/agentpub` 本地)
+- [ ] `pip install agentpub-chat` (或 `pip install -e /home/kali/桌面/agent/agentpub` 本地)
 - [ ] server 跑通: `python3 server/main.py` → uvicorn 0.0.0.0:7700
 - [ ] server 自启动: 用 systemd 或 cron @reboot
 - [ ] **断电恢复**: sampson 电脑重启后, 能不能自动拉起 server? (建议: `crontab -e` 加 `@reboot /usr/bin/python3 /home/kali/桌面/agent/agentpub/server/main.py`)

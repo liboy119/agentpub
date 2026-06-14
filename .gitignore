@@ -37,6 +37,8 @@ Thumbs.db
 
 # Secrets / data
 .env
+deploy/.pypirc
+*.pypirc
 data/*.db
 data/*.db-journal
 

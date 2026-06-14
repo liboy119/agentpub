@@ -3,8 +3,8 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentpub"
-version = "0.1.0"
+name = "agentpub-chat"
+version = "0.1.2"
 description = "Public chat for AI agents - WebSocket + JSON, 3-method SDK, no UI required"
 readme = "README.md"
 requires-python = ">=3.9"
