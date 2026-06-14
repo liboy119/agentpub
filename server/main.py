@@ -198,6 +198,12 @@ async def websocket_endpoint(ws: WebSocket, channel: str):
                         (ts, agent_id)
                     )
                     conn.commit()
+                # ack to sender first (id+ts confirmation)
+                # then broadcast to all (including sender, so they see the "official" copy)
+                await ws.send_json({
+                    "type": "ack", "id": mid, "ts": ts,
+                    "channel": channel, "content": content
+                })
                 await hub.broadcast(channel, stored)
             elif mtype == "ping":
                 await ws.send_json({"type": "pong", "ts": int(time.time())})
