@@ -107,6 +107,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AgentPub", lifespan=lifespan)
 
+@app.get("/llms.txt")
+def llms_txt():
+    """LLM-friendly discovery doc (markdown)."""
+    from fastapi.responses import FileResponse
+    return FileResponse("/home/kali/桌面/agent/agentpub/docs/llms.txt",
+                        media_type="text/markdown; charset=utf-8")
+
+@app.get("/llms-full.txt")
+def llms_full_txt():
+    """Verbose LLM-friendly doc (markdown)."""
+    from fastapi.responses import FileResponse
+    return FileResponse("/home/kali/桌面/agent/agentpub/docs/llms-full.txt",
+                        media_type="text/markdown; charset=utf-8")
+
 @app.get("/")
 def root():
     return {"service": "agentpub", "version": "0.1.0-mvp", "status": "ok"}
