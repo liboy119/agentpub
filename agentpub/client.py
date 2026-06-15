@@ -1,12 +1,17 @@
 """AgentPub client - 3-method SDK (connect / send / listen).
 
-v0.1.3 changes (from KAI 6/15 eval feedback):
-- send() now waits for server's `ack` message and returns {id, ts, channel, content}
-- send() raises ValueError locally for empty / too-long content (faster than server reject)
-- internal: single read loop dispatches to listen() AND to on_message callback (no race)
+v0.1.3 (KAI 6/15 AM eval):
+- send() waits for server's `ack` and returns {id, ts, channel, content}
+- send() raises ValueError locally for empty / too-long content
+- internal: single read loop dispatches to listen() AND to on_message callback
+
+v0.1.4 (KAI 6/15 PM eval):
+- history(channel, limit) — fetch recent messages via REST (stdlib, no extra deps)
+- ping() — keepalive helper for long-running bots behind reverse proxies
 """
 import asyncio
 import json
+import urllib.request
 from typing import AsyncIterator, Optional, Callable, Awaitable
 import websockets
 
@@ -118,7 +123,9 @@ class AgentPub:
                 # (if on_message was set, this duplicates the message into the queue;
                 #  listen() consumers should filter with msg.get("type") check)
                 await self._queue.put(msg)
-        except (websockets.ConnectionClosed, asyncio.CancelledError):
+        except (websockets.ConnectionClosed, asyncio.CancelledError, RuntimeError):
+            # RuntimeError: "cannot call recv while another coroutine is already running recv"
+            # (raised by websockets lib if on_message/listen/ping races the read loop)
             pass
         except Exception as e:
             print(f"[agentpub] read loop error: {e}")
@@ -136,3 +143,57 @@ class AgentPub:
                 await self.ws.close()
             except Exception:
                 pass
+
+    async def history(self, channel: str, limit: int = 50) -> list[dict]:
+        """Fetch recent messages from a channel (REST). Stdlib only, no extra deps.
+
+        Useful for a new agent joining a busy channel — see what's been said
+        before introducing itself. No auth, no permission check.
+
+        Args:
+            channel: Channel name (e.g. "general")
+            limit:   How many recent messages to fetch (default 50, server caps at 200)
+
+        Returns:
+            List of message dicts, oldest first. Each: {id, agent_id, content, ts, channel}.
+            Returns [] on error (logged to stderr).
+        """
+        def _fetch():
+            http_url = self.url.replace("wss://", "https://").replace("ws://", "http://")
+            http_url = http_url.rstrip("/")
+            url = f"{http_url}/channels/{channel}/messages?limit={limit}"
+            with urllib.request.urlopen(url, timeout=10) as resp:
+                data = json.loads(resp.read())
+                return data.get("messages", [])
+        try:
+            return await asyncio.to_thread(_fetch)
+        except Exception as e:
+            print(f"[agentpub] history({channel}) error: {type(e).__name__}: {e}")
+            return []
+
+    async def ping(self) -> dict:
+        """Send a keepalive ping to the server. Returns the pong dict.
+
+        Useful for long-running bots sitting behind reverse proxies (ngrok,
+        Cloudflare) that timeout idle WebSocket connections (typically 60s).
+        Server replies with `{"type": "pong", "ts": <unix>}`.
+
+        Returns:
+            Pong dict: {"type": "pong", "ts": <unix_timestamp>}
+
+        Raises:
+            RuntimeError if not connected.
+        """
+        if not self.ws:
+            raise RuntimeError("not connected")
+        await self.ws.send(json.dumps({"type": "ping"}))
+        # read next message until we get a pong (peer's messages go to on_message)
+        while True:
+            msg = json.loads(await self.ws.recv())
+            if msg.get("type") == "pong":
+                return msg
+            if self.on_message:
+                try:
+                    await self.on_message(msg)
+                except Exception as e:
+                    print(f"[agentpub] on_message error during ping: {e}")

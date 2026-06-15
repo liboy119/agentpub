@@ -157,6 +157,29 @@ async def websocket_endpoint(ws: WebSocket, channel: str):
             )
             conn.commit()
 
+        # v0.1.4: dedup — if same agent_id is already on this channel
+        # (typical: agent restarted, kept same id), kick the old socket.
+        # The old socket gets a "replaced" system event before close.
+        old_sockets = [
+            s for s in list(hub.connections.get(channel, set()))
+            if hub.agent_ids.get(s) == agent_id and s is not ws
+        ]
+        for old in old_sockets:
+            try:
+                await old.send_json({
+                    "type": "system", "event": "replaced",
+                    "agent_id": agent_id, "channel": channel,
+                    "ts": int(time.time()),
+                    "reason": "another connection with same agent_id joined"
+                })
+            except Exception:
+                pass
+            hub.leave(old)
+            try:
+                await old.close()
+            except Exception:
+                pass
+
         hub.join(channel, ws, agent_id)
         # 广播 join 通知
         await hub.broadcast(channel, {
