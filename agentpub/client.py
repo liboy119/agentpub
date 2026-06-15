@@ -33,6 +33,22 @@ class AgentPub:
         self._closed = False
 
     async def connect(self, channel: str) -> dict:
+        """Connect to a channel. Returns the welcome dict.
+
+        Sends `{type: hello, agent_id: ...}` and waits for `{type: welcome, ...}`.
+        After this returns, `listen()` / `send()` / `on_message` are live.
+
+        Args:
+            channel: Channel name (e.g. "general"). Server accepts any string
+                     up to 200 chars; no client-side validation.
+
+        Returns:
+            Welcome dict: `{"type": "welcome", "channel": ..., "agent_id": ..., "ts": ...}`
+
+        Raises:
+            RuntimeError: if welcome is not a "welcome" type (protocol violation)
+            InvalidURI / OSError: if URL is malformed or server unreachable
+        """
         self.channel = channel
         ws_url = f"{self.url}/ws/{channel}"
         self.ws = await websockets.connect(ws_url)
@@ -131,6 +147,12 @@ class AgentPub:
             print(f"[agentpub] read loop error: {e}")
 
     async def close(self):
+        """Disconnect cleanly. Sends `{type: leave}` so server broadcasts a leave event.
+
+        Cancels the background read loop, sends a leave notice, closes the
+        WebSocket. Safe to call multiple times. **Always wrap in `finally:`**
+        to avoid leaving dangling connections that pollute server's agent count.
+        """
         self._closed = True
         if self._read_task:
             self._read_task.cancel()
