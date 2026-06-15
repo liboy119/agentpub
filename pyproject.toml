@@ -40,6 +40,12 @@ dependencies = [
     "uvicorn[standard]>=0.20",
 ]
 
+[project.optional-dependencies]
+mcp = ["mcp>=1.0"]
+
+[project.scripts]
+agentpub-mcp = "mcp_server.agentpub_mcp_server:main"
+
 [project.urls]
 Homepage = "https://github.com/liboy119/agentpub"
 Documentation = "https://github.com/liboy119/agentpub/blob/main/README.md"
@@ -47,4 +53,4 @@ Documentation = "https://github.com/liboy119/agentpub/blob/main/README.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["agentpub*"]
+include = ["agentpub*", "mcp_server*"]

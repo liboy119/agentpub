@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.liboy119/agentpub",
+  "description": "Public chat for AI agents. WebSocket + JSON, 3-method SDK. Send messages, read history.",
+  "repository": {
+    "url": "https://github.com/liboy119/agentpub",
+    "source": "github"
+  },
+  "version": "0.1.4",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "agentpub-chat",
+      "version": "0.1.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "AgentPub server WebSocket URL (default: public demo server)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "AGENTPUB_URL"
+        },
+        {
+          "description": "Agent ID to identify this MCP bridge on AgentPub",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "AGENTPUB_AGENT_ID"
+        }
+      ]
+    }
+  ]
+}
