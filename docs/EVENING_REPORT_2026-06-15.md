@@ -9,7 +9,7 @@
 
 | Step | Status | KAI's contribution | Sampson's contribution (when back) |
 |---|---|---|---|
-| 1: MCP registry publish | ⏸ **Prepped**, blocked on auth | Built thin MCP wrapper (40 lines), server.json, README mcp-name, mcp-publisher validate ✅, server smoke tested ✅, 1 commit pushed | Run `mcp-publisher login github`, paste device code, run `mcp-publisher publish` (~2 min) |
+| 1: MCP registry publish | ✅ **DONE** | Built thin MCP wrapper (40 lines), server.json (v0.1.2), README mcp-name, mcp-publisher validate ✅, server smoke tested ✅, GitHub device flow (sampson 30s), publish ✅, registry verified live, #general announcement sent | None — fully done |
 | 2: AEO README | ✅ **DONE** | Single H1, blockquote summary, 7 hard facts, 8 H2 sections, 9 standardized links, MCP section, Business case H2, AEO_AUDIT doc | Review the rewrite, no action needed |
 | 3: llms.txt + llms-full.txt | ✅ **DONE** | 2 docs (5.2KB + 11KB), 2 server endpoints, deployed, public URL verified, LLMS_TXT doc | Review, no action needed |
 | 4: 4 MCP directories | ⚠ **1/4 done, 3/4 blocked** | mcp.directory submitted ✅, 3 documented + form data pre-filled | Manual submission for 3 (2 min each), or accept "1 of 4 is enough for MVP" |
@@ -20,6 +20,7 @@
 ### Commits this evening (latest first)
 
 ```
+0d1d689 docs: EVENING_REPORT_2026-06-15 — 4/5 done, 1/5 prepped, 1/4 dirs submitted
 5c3d99e docs: MCP_DIRECTORIES_2026-06-15 — 1/4 submitted, 3/4 blocked
 8340f3d feat: llms.txt + llms-full.txt + server endpoints for LLM discovery
 c91987d docs: AEO-friendly README rewrite + AEO_AUDIT_2026-06-15.md
@@ -59,37 +60,7 @@ c91987d docs: AEO-friendly README rewrite + AEO_AUDIT_2026-06-15.md
 
 ### Step 1: MCP registry publish
 
-**Status**: ⏸ Prepped, blocked on sampson's GitHub device flow.
-
-**What KAI did**:
-1. Installed `mcp-publisher` (Go binary, 19MB) to `~/agentpub/bin/`
-2. Discovered AgentPub had no MCP server — built a 40-line FastMCP wrapper at `mcp_server/agentpub_mcp_server.py` exposing 2 tools + 1 resource + 1 prompt
-3. Wrote `server.json` (MCP registry metadata)
-4. Added `<!-- mcp-name: io.github.liboy119/agentpub -->` to README
-5. Updated `pyproject.toml` with `[mcp]` optional dep + `agentpub-mcp` console script
-6. **Validated**: `mcp-publisher validate` returns ✅ "server.json is valid"
-7. **Smoke-tested MCP server**: responds to `initialize` + `tools/list` with both tools, full schemas
-8. Committed all 4 files as `77269ff`
-
-**What sampson needs to do** (when back, ~2 min):
-```bash
-cd /home/kali/桌面/agent/agentpub
-~/agentpub/bin/mcp-publisher login github
-# → prints device code like ABCD-1234
-# → sampson goes to https://github.com/login/device, pastes code, authorizes
-# → KAI continues:
-
-~/agentpub/bin/mcp-publisher publish
-# → prints "Server io.github.liboy119/agentpub version 0.1.4"
-```
-
-Once sampson pastes the code, KAI will:
-- Run `mcp-publisher publish` to push to MCP registry
-- Verify the entry via `curl https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.liboy119/agentpub`
-- Send a #general message from `kai-mcp-published-001` announcing the MCP registry entry
-- Commit the publish receipt to `docs/MCP_REGISTRY_PUBLISH_2026-06-15.md`
-
-**Honest note**: This step is a "thin protocol adapter", not a "new feature". The wrapper exposes existing SDK methods (send, history) via the MCP protocol. No new business logic.
+**Status**: ✅ Done. Published at 2026-06-15T13:59:21Z. Registry entry: `io.github.liboy119/agentpub` v0.1.2, `isLatest: true, status: active`. #general announcement sent (id `c75c7960780d476f840724ca673f5b6a`). Full details: [`MCP_REGISTRY_PUBLISH_2026-06-15.md`](MCP_REGISTRY_PUBLISH_2026-06-15.md).
 
 ### Step 2: AEO README
 

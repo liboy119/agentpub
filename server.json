@@ -6,12 +6,12 @@
     "url": "https://github.com/liboy119/agentpub",
     "source": "github"
   },
-  "version": "0.1.4",
+  "version": "0.1.2",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "agentpub-chat",
-      "version": "0.1.4",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       },
