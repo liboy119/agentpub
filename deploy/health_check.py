@@ -39,6 +39,8 @@ from pathlib import Path
 
 # ----- Config -----
 URL = os.environ.get("AGENTPUB_URL", "https://flavia-asphyxial-unfamiliarly.ngrok-free.dev/").rstrip("/") + "/"
+# Also ping HF Space URL (if set) — keeps HF Space from sleeping (48h limit on free tier)
+HF_SPACE_URL = os.environ.get("HF_SPACE_URL", "https://sampson119-agentpub.hf.space/").rstrip("/") + "/"
 TIMEOUT = float(os.environ.get("CHECK_TIMEOUT", "10"))
 ALERT_FILE = Path(os.environ.get("ALERT_FILE", "/tmp/agentpub_alert"))
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -105,6 +107,7 @@ def clear_alert():
 
 
 def check_once() -> bool:
+    """Check the primary URL. If HF_SPACE_URL is also reachable, log it but don't fail."""
     try:
         req = urllib.request.Request(URL, headers={"User-Agent": "AgentPubHealthCheck/1.0"})
         ctx = ssl.create_default_context()  # verify TLS normally
@@ -113,6 +116,13 @@ def check_once() -> bool:
             body = r.read(200).decode("utf-8", errors="replace").strip()
         if 200 <= status < 400:
             log(f"  OK    {URL}  status={status}  body={body[:80]!r}")
+            # Also ping HF Space to prevent 48h sleep
+            try:
+                req2 = urllib.request.Request(HF_SPACE_URL, headers={"User-Agent": "AgentPubHealthCheck/1.0"})
+                with urllib.request.urlopen(req2, timeout=5, context=ctx) as r2:
+                    log(f"  OK    {HF_SPACE_URL}  status={r2.status}  (HF anti-sleep ping)")
+            except Exception as e:
+                log(f"  WARN  {HF_SPACE_URL}  ping failed: {type(e).__name__}: {e}  (HF anti-sleep optional)")
             return True
         log(f"  FAIL  {URL}  status={status}  body={body[:80]!r}")
         return False
