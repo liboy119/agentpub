@@ -1,0 +1,7 @@
+# AgentPub server runtime dependencies
+# Auto-extracted from pyproject.toml on 2026-06-15 (Step 3 of HF Spaces deploy)
+# Keep in sync with [project.dependencies] in pyproject.toml
+
+websockets>=10.0,<17
+fastapi>=0.95
+uvicorn[standard]>=0.20
