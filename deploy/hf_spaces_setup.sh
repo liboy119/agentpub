@@ -85,7 +85,7 @@ echo "[4/5] Pulling HF Space initial commit + pushing (one-shot URL, no token in
 # Add HF remote temporarily (without token — use env var or placeholder)
 git remote add hf "https://huggingface.co/spaces/sampson119/agentpub" 2>/dev/null || git remote set-url hf "https://huggingface.co/spaces/sampson119/agentpub"
 # Pull (with token) — allows non-fast-forward merge of HF's initial commit
-git pull --no-edit --rebase=false "https://sampson119:${HF_TOKEN}@huggingface.co/spaces/sampson119/agentpub" main 2>&1 | tail -5 || echo "  (pull had conflicts — manual resolution may be needed)"
+git pull --no-edit --rebase=false --allow-unrelated-histories "https://sampson119:${HF_TOKEN}@huggingface.co/spaces/sampson119/agentpub" main 2>&1 | tail -5 || echo "  (pull had conflicts — manual resolution may be needed)"
 # Push with token in URL (one-shot, not stored)
 git push "https://sampson119:${HF_TOKEN}@huggingface.co/spaces/sampson119/agentpub" main 2>&1 | tail -10
 # Remove remote to avoid token confusion later
