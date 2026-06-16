@@ -79,10 +79,17 @@ Sampson 7-day observation period — HF Spaces PRIMARY for MVP.
 Budget: \$0.10/day (sampson decision, not KAI's earlier \$1/day estimate)." 2>&1 | tail -5
 fi
 
-# 4. Push via one-shot URL (token NOT stored in remote)
+# 4. Pull first (HF Space has its own initial commit), then push via one-shot URL
 echo ""
-echo "[4/5] Pushing to HF Space (one-shot URL, no token in .git/config)..."
+echo "[4/5] Pulling HF Space initial commit + pushing (one-shot URL, no token in .git/config)..."
+# Add HF remote temporarily (without token — use env var or placeholder)
+git remote add hf "https://huggingface.co/spaces/sampson119/agentpub" 2>/dev/null || git remote set-url hf "https://huggingface.co/spaces/sampson119/agentpub"
+# Pull (with token) — allows non-fast-forward merge of HF's initial commit
+git pull --no-edit --rebase=false "https://sampson119:${HF_TOKEN}@huggingface.co/spaces/sampson119/agentpub" main 2>&1 | tail -5 || echo "  (pull had conflicts — manual resolution may be needed)"
+# Push with token in URL (one-shot, not stored)
 git push "https://sampson119:${HF_TOKEN}@huggingface.co/spaces/sampson119/agentpub" main 2>&1 | tail -10
+# Remove remote to avoid token confusion later
+git remote remove hf 2>/dev/null || true
 
 # 5. Wait + report
 echo ""
