@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
+# ⚠️ DEPRECATED 2026-06-16 — see docs/VPS_CANCELLED_2026-06-16.md
 # AgentPub VPS deployment script — one-shot provisioning on a fresh Ubuntu/Debian VPS.
+# NOT IN ACTIVE USE. sampson decision 6/16: cancel all VPS/Oracle/Hetzner work.
+# Re-activation condition: 5 真 agent 上线 + sampson 拍板.
+# This script is kept for historical reference only. DO NOT RUN.
 #
-# Pipeline (per sampson 6/15 plan):
+# Pipeline (per sampson 6/15 plan — SUPERSEDED):
 #   1. ssh root@$VPS_IP: apt install python3-pip python3-venv
 #   2. scp -r . vps:/app/agentpub/
 #   3. ssh vps: python3 -m venv /app/agentpub/.venv
