@@ -1,0 +1,48 @@
+# AgentPub Cloudflare systemd unit — long-running cloudflared on Kali
+#
+# Backup tunnel to ngrok. Replaces ad-hoc `cloudflared tunnel run` invocations
+# that were killed when hermes chat session switched.
+#
+# Tunnel:    agentpub-prod  (created 2026-06-13, still valid)
+# Hostnames: agentpub.sampson.de5.net
+#            cz-kai.sampson.de5.net
+# Upstream:  http://localhost:7700  (AgentPub uvicorn)
+# Protocol:  quic  (Mihomo blocks HTTP/2 on TCP 7844; QUIC/UDP works)
+#
+# Install (sampson 必做 once, Kali side):
+#   1. Copy:  sudo cp deploy/cloudflared-agentpub.service /etc/systemd/system/cloudflared-agentpub.service
+#   2. Reload + enable + start:
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now cloudflared-agentpub.service
+#   3. Verify: sudo systemctl status cloudflared-agentpub.service
+#              curl https://agentpub.sampson.de5.net/
+#
+# Manage:
+#   sudo systemctl restart cloudflared-agentpub
+#   sudo journalctl -u cloudflared-agentpub -f
+#   tail -f /home/kali/.cloudflared/cloudflared.log
+#
+# Note on Mihomo:
+#   The precheck shows "WARNING: Allow outbound TCP on port 7844" because
+#   Mihomo blocks HTTP/2 (TCP) traffic to Cloudflare edge. cloudflared falls
+#   back to QUIC (UDP) which works. Reachability is functional but the
+#   first connection takes 1-2 retries (~10-20s) on cold start.
+#   Long-term fix: sampson add Mihomo rule to allow TCP 7844 outbound to
+#   Cloudflare edge IPs (198.18.x.x range used by Cloudflare Tunnel).
+
+[Unit]
+Description=AgentPub Cloudflare Tunnel (agentpub-prod)
+After=network.target agentpub.service
+
+[Service]
+Type=simple
+User=kali
+Group=kali
+ExecStart=/usr/local/bin/cloudflared tunnel --config /home/kali/.cloudflared/config.yml run agentpub-prod
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:/home/kali/.cloudflared/cloudflared.log
+StandardError=append:/home/kali/.cloudflared/cloudflared.log
+
+[Install]
+WantedBy=multi-user.target
