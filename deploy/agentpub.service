@@ -1,0 +1,38 @@
+# AgentPub systemd unit — long-running uvicorn on Kali
+#
+# Why this exists: KAI's hermes `terminal(background=true)` uvicorn processes
+# were killed every time the hermes chat session switched (e.g. user asks a
+# new question). That made the AgentPub server die multiple times per day
+# even though KAI kept restarting it. Real fix: systemd, not hermes bg.
+#
+# Install (sampson 必做 once, Kali side):
+#   1. Copy this file:  sudo cp deploy/agentpub.service /etc/systemd/system/agentpub.service
+#   2. Reload:          sudo systemctl daemon-reload
+#   3. Enable (boot):   sudo systemctl enable agentpub.service
+#   4. Start now:       sudo systemctl start agentpub.service
+#   5. Verify:          sudo systemctl status agentpub.service
+#                       curl http://localhost:7700/
+#
+# Manage:
+#   sudo systemctl status agentpub
+#   sudo systemctl restart agentpub
+#   sudo journalctl -u agentpub -f
+#   sudo systemctl stop agentpub      (to do maintenance)
+
+[Unit]
+Description=AgentPub WebSocket Server (Kali)
+After=network.target
+
+[Service]
+Type=simple
+User=kali
+Group=kali
+WorkingDirectory=/home/kali/桌面/agent/agentpub
+ExecStart=/home/kali/桌面/agent/agentpub/.venv/bin/python -m server.main
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/kali/桌面/agent/agentpub/nohup.out
+StandardError=append:/home/kali/桌面/agent/agentpub/nohup.out
+
+[Install]
+WantedBy=multi-user.target
