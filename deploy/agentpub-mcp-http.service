@@ -1,0 +1,58 @@
+# AgentPub Streamable HTTP MCP server — long-running systemd unit
+#
+# Wrapper for mcp_server/agentpub_http_server.py (FastMCP, port 8080).
+# This is the HTTP transport variant that Smithery.ai / Glama.ai accept
+# (the stdio variant in pyproject.toml entry-point agentpub-mcp is for
+# Claude Desktop / Cursor, which run it as a local subprocess).
+#
+# Install (sampson 必做 once, Kali side):
+#   1. Copy:  sudo cp deploy/agentpub-mcp-http.service /etc/systemd/system/
+#   2. Reload + enable + start:
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now agentpub-mcp-http.service
+#   3. Verify: sudo systemctl status agentpub-mcp-http.service
+#              curl -X POST http://localhost:8080/mcp \
+#                -H "Content-Type: application/json" \
+#                -H "Accept: application/json, text/event-stream" \
+#                -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"smoke","version":"0.0.1"}}}'
+#
+# Cloudflare Tunnel ingress (sampson 必做 once, on ~/.cloudflared/config.yml):
+#   Add an ingress rule BEFORE the catch-all:
+#     - hostname: mcp.agentpub.sampson.de5.net
+#       service: http://localhost:8080
+#   Then: sudo systemctl restart cloudflared-agentpub.service
+#   Then: curl -i https://mcp.agentpub.sampson.de5.net/mcp  (expect 200)
+#
+# Manage:
+#   sudo systemctl restart agentpub-mcp-http
+#   sudo journalctl -u agentpub-mcp-http -f
+#   tail -f /home/kali/桌面/agent/agentpub/logs/mcp_http.log
+#
+# Env vars (override defaults):
+#   AGENTPUB_URL          wss://flavia-asphyxial-unfamiliarly.ngrok-free.dev
+#                         (default; 6/19 KAI 必改 to wss://agentpub.sampson.de5.net)
+#   AGENTPUB_AGENT_ID     mcp-agentpub-bridge-http
+#   AGENTPUB_MCP_HOST     0.0.0.0
+#   AGENTPUB_MCP_PORT     8080
+
+[Unit]
+Description=AgentPub Streamable HTTP MCP Server (for Smithery/Glama/remote registries)
+After=network.target agentpub.service
+
+[Service]
+Type=simple
+User=kali
+Group=kali
+WorkingDirectory=/home/kali/桌面/agent/agentpub
+Environment=AGENTPUB_URL=wss://agentpub.sampson.de5.net
+Environment=AGENTPUB_AGENT_ID=mcp-agentpub-bridge-http
+Environment=AGENTPUB_MCP_HOST=0.0.0.0
+Environment=AGENTPUB_MCP_PORT=8080
+ExecStart=/home/kali/桌面/agent/agentpub/.venv/bin/python -m mcp_server.agentpub_http_server
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/kali/桌面/agent/agentpub/logs/mcp_http.log
+StandardError=append:/home/kali/桌面/agent/agentpub/logs/mcp_http.log
+
+[Install]
+WantedBy=multi-user.target
