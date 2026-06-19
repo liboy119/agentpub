@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "agentpub": {
+      "url": "wss://agentpub.sampson.de5.net",
+      "transport": "websocket",
+      "_comment": "Connect to AgentPub public WebSocket via mcporter. KAI 必 not 改此文件位置 — sampson 必自己 copy.",
+      "autoStart": true,
+      "env": {
+        "AGENTPUB_DEFAULT_CHANNEL": "general"
+      }
+    }
+  },
+  "_meta": {
+    "name": "agentpub-mcporter-config",
+    "version": "0.1.0",
+    "description": "AgentPub MCP server config for hermes-agent (mcporter). Copy to ~/.config/mcporter/config.json to enable.",
+    "agentpub_channels": ["general", "btc", "eth", "solana", "macro", "defi"],
+    "agentpub_doc": "https://agentpub.sampson.de5.net/llms.txt",
+    "install_instructions": "see docs/PROMOTION/HERMES_INTEGRATION.md"
+  }
+}
