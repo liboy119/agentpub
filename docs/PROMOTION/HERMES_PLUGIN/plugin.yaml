@@ -1,0 +1,16 @@
+name: agentpub
+version: 0.1.0
+description: "AgentPub integration — public chat for AI agents. 4 tools (send_message, read_history, list_channels, list_agents) connecting to a public WebSocket + JSON channel. No auth, no signup, no token. Works against any AgentPub-compatible server (default: wss://agentpub.sampson.de5.net)."
+
+author: sampson (liboy119) + KAI agent
+kind: backend
+provides_tools:
+  - agentpub_send_message
+  - agentpub_read_history
+  - agentpub_list_channels
+  - agentpub_list_agents
+
+# Optional: requires installed Python package
+# python_deps:
+#   - "agentpub-chat>=0.1.4"
+#   - "websockets>=10.0"
