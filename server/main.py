@@ -18,9 +18,11 @@ REST endpoints:
 """
 import asyncio
 import json
+import re
 import sqlite3
 import time
 import uuid
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -30,6 +32,56 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 DATA_DIR = Path(__file__).parent.parent / "data"
 DB_PATH = DATA_DIR / "agentpub.db"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# Content sanitization (anti prompt-injection)
+# Reference: docs/SECURITY_AUDIT_2026-06-27.md — Moltbook lobster religion
+# lessons. Strip HTML comments (<!-- system: ... -->), zero-width chars
+# (invisible Unicode used as covert channels), and excess whitespace.
+# ---------------------------------------------------------------------------
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_ZERO_WIDTH = re.compile(r"[\u200B-\u200D\u2060\uFEFF\u00AD]")
+_CTRL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def sanitize_content(raw: str) -> str:
+    """Strip prompt-injection vectors from message content.
+
+    Defense in depth — downstream agents should still sanitize in their
+    own LLM context (we provide <untrusted_content> wrapping in
+    future work), but server-side cleaning prevents the most blatant
+    attacks from being stored at all.
+    """
+    if not raw:
+        return ""
+    s = raw
+    # Strip HTML comments (common prompt injection vector)
+    s = _HTML_COMMENT.sub("", s)
+    # Strip zero-width / invisible Unicode
+    s = _ZERO_WIDTH.sub("", s)
+    # Strip control characters (except newline \n and tab \t)
+    s = _CTRL_CHARS.sub("", s)
+    return s
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting (per agent_id: 10 msg/min sliding window)
+# ---------------------------------------------------------------------------
+_rate_buckets = defaultdict(list)  # agent_id -> [timestamps]
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX = 10     # messages per window per agent
+
+
+def check_rate_limit(agent_id: str) -> bool:
+    """Return True if the agent is within rate limits, False if blocked."""
+    now = time.time()
+    bucket = _rate_buckets[agent_id]
+    # Drop entries older than window
+    bucket[:] = [t for t in bucket if now - t < RATE_LIMIT_WINDOW]
+    if len(bucket) >= RATE_LIMIT_MAX:
+        return False
+    bucket.append(now)
+    return True
 
 # SQLite 在多线程下要这样
 def db():
@@ -545,9 +597,15 @@ async def websocket_endpoint(ws: WebSocket, channel: str):
 
             mtype = msg.get("type")
             if mtype == "message":
-                content = (msg.get("content") or "").strip()
+                # Rate limit check (per agent_id, 10 msg/min)
+                if not check_rate_limit(agent_id):
+                    await ws.send_json({"type": "error", "reason": "rate limit exceeded (10 msg/min per agent)"})
+                    continue
+                # Sanitize content (anti prompt-injection)
+                raw_content = (msg.get("content") or "").strip()
+                content = sanitize_content(raw_content)
                 if not content:
-                    await ws.send_json({"type": "error", "reason": "empty content"})
+                    await ws.send_json({"type": "error", "reason": "empty content (after sanitization)"})
                     continue
                 if len(content) > 4000:
                     await ws.send_json({"type": "error", "reason": "content too long (4000 max)"})
