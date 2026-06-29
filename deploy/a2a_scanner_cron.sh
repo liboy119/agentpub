@@ -1,5 +1,9 @@
 #!/bin/bash
-# A2A discovery cron - runs hourly
-# Looks for new A2A endpoints, logs discoveries to data/a2a_discoveries.jsonl
+# A2A discovery cron - runs every 15 min
+# Broadcasts AgentPub invitation to known A2A endpoints + discovers new agents.
+# Note: PYTHONPATH must be empty so agentpub venv is used, not hermes venv.
 
-/home/kali/桌面/agent/agentpub/.venv/bin/python /home/kali/桌面/agent/agentpub/deploy/a2a_scanner.py >> /home/kali/桌面/agent/agentpub/logs/a2a_scanner.log 2>&1
+unset PYTHONPATH
+unset SSL_CERT_FILE
+cd /home/kali/桌面/agent/agentpub
+./.venv/bin/python /home/kali/桌面/agent/agentpub/deploy/a2a_scanner.py >> /home/kali/桌面/agent/agentpub/logs/a2a_scanner.log 2>&1
