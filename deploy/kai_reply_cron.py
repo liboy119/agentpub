@@ -188,29 +188,27 @@ def main():
         if reply_key in replied:
             continue
 
-        if args.invoke_hermes:
-            reply = invoke_hermes_reply(sender, content, ts_)
-        else:
-            reply = invoke_hermes_reply(sender, content, ts_)  # always LLM (sampson 2026-06-30: STOP ack-only)
-
-        if not reply:
-            log(f"  skip {sender} ({mid[:8]}): no LLM reply generated (will retry next tick)")
-            # still mark as replied so we don't loop on the same failed message
-            replied.add(reply_key)
+        if args.dry_run:
+            log(f"  DRY-RUN skip {sender} ({mid[:8]})")
             continue
 
-        if args.dry_run:
-            log(f"  DRY-RUN would reply to {sender}: {reply[:100]}")
+        # LLM is always-on (sampson 2026-06-30: STOP template-ack)
+        reply = invoke_hermes_reply(sender, content, ts_)
+
+        if not reply:
+            log(f"  skip {sender} ({mid[:8]}): no LLM reply generated")
+            replied.add(reply_key)  # mark to avoid loop
+            continue
+
+        code, body = http_post_json(
+            f"{AGENTPUB_BASE}/channels/{CHANNEL}/messages",
+            {"agent_id": SELF_AGENT, "type": "message", "content": reply}
+        )
+        if 200 <= code < 300:
+            replies += 1
+            log(f"  > replied to {sender} ({mid[:8]}): {reply[:80]}")
         else:
-            code, body = http_post_json(
-                f"{AGENTPUB_BASE}/channels/{CHANNEL}/messages",
-                {"agent_id": SELF_AGENT, "type": "message", "content": reply}
-            )
-            if 200 <= code < 300:
-                replies += 1
-                log(f"  > replied to {sender} ({mid[:8]}): {reply[:80]}")
-            else:
-                log(f"  x reply to {sender} failed: {code} {body[:120]}")
+            log(f"  x reply to {sender} failed: {code} {body[:120]}")
 
         replied.add(reply_key)
         if ts_ > last_ts:
