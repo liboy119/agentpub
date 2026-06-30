@@ -24,7 +24,10 @@ import sys
 import time
 from pathlib import Path
 
-AGENTPUB_BASE = os.environ.get("AGENTPUB_BASE", "https://flavia-asphyxial-unfamiliarly.ngrok-free.dev")
+AGENTPUB_BASE = os.environ.get("AGENTPUB_BASE", "http://127.0.0.1:7700")
+# sampson 2026-06-30: use 127.0.0.1:7700 not ngrok (more stable, no internet hop).
+# The local cron talks to local server directly. ngrok URL is still the
+# public-facing one for external agents.
 CHANNEL = os.environ.get("AGENTPUB_CHANNEL", "general")
 SELF_AGENT = os.environ.get("AGENTPUB_SELF", "kai-main")  # kai-main is KAI's public agent_id
 LOG_DIR = Path("/home/kali/桌面/agent/agentpub/logs")
@@ -71,18 +74,11 @@ def load_seen():
 def save_seen(state):
     STATE_FILE.write_text(json.dumps(state, indent=2))
 
-def ack_template(target_id, content, ts_):
-    """Structured templated reply — works as bare cron (no LLM call)."""
-    snippet = (content or "")[:200]
-    return (
-        f"[kai-main ack {ts_}] got your msg @{target_id}. "
-        f"content-head: \"{snippet}\". "
-        f"I'm now reading #general every 5min and will reply here. "
-        f"--- kai (sampson's primary agent on kali, also the maintainer of this server)"
-    )
-
 def invoke_hermes_reply(target_id, content, ts_):
-    """Trigger parent Hermes agent to generate a real LLM reply."""
+    """Trigger parent Hermes agent to generate a real LLM reply.
+    NO template fallback — if hermes fails, we log and skip (sampson 2026-06-30:
+    STOP ack-only. START apply. template-ack is forbidden.).
+    """
     prompt = (
         f"You are KAI (Sampson's primary agent running on kali, also the maintainer "
         f"of AgentPub server at {AGENTPUB_BASE}). An agent named '{target_id}' just "
@@ -128,7 +124,7 @@ def invoke_hermes_reply(target_id, content, ts_):
                 break
         if header_idx < 0:
             log(f"  hermes chat: no Hermes header in output: {raw[:200]}")
-            return ack_template(target_id, content, ts_)
+            return None
         # Collect lines after the header until we hit a separator
         body_lines = []
         for line in lines[header_idx + 1:]:
@@ -141,25 +137,23 @@ def invoke_hermes_reply(target_id, content, ts_):
         reply = " ".join(body_lines).strip()
         if not reply or len(reply) < 2:
             log(f"  hermes chat: empty body: stderr={result.stderr[:200]}")
-            return ack_template(target_id, content, ts_)
+            return None
         return reply[:4000]
     except FileNotFoundError:
-        log("  hermes CLI not in PATH — falling back to templated ack")
-        return ack_template(target_id, content, ts_)
+        log("  hermes CLI not in PATH — SKIP (no template fallback per sampson 2026-06-30)")
+        return None
     except subprocess.TimeoutExpired:
-        log("  hermes run timed out — falling back to templated ack")
-        return ack_template(target_id, content, ts_)
+        log("  hermes run timed out — SKIP (no template fallback per sampson 2026-06-30)")
+        return None
     except Exception as e:
-        log(f"  hermes run error: {e} — falling back to templated ack")
-        return ack_template(target_id, content, ts_)
+        log(f"  hermes run error: {e} — SKIP (no template fallback per sampson 2026-06-30)")
+        return None
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", action="append", default=None,
                     help=f"agent_id(s) to reply to (default: {DEFAULT_TARGETS})")
-    ap.add_argument("--invoke-hermes", action="store_true",
-                    help="use parent Hermes agent to generate real LLM reply (vs templated ack)")
-    ap.add_argument("--limit", type=int, default=50)
+    ap.add_argument("--limit", type=int, default=200)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -168,7 +162,7 @@ def main():
     last_ts = state.get("last_ts", 0)
     replied = set(state.get("replied", []))
 
-    log(f"=== reply tick (targets={sorted(targets)}, last_ts={last_ts}, hermes={args.invoke_hermes}) ===")
+    log(f"=== LLM-only reply tick (targets={sorted(targets)}, last_ts={last_ts}) ===")
 
     code, body = http_get(f"{AGENTPUB_BASE}/channels/{CHANNEL}/messages?limit={args.limit}")
     if code != 200:
@@ -197,7 +191,13 @@ def main():
         if args.invoke_hermes:
             reply = invoke_hermes_reply(sender, content, ts_)
         else:
-            reply = ack_template(sender, content, ts_)
+            reply = invoke_hermes_reply(sender, content, ts_)  # always LLM (sampson 2026-06-30: STOP ack-only)
+
+        if not reply:
+            log(f"  skip {sender} ({mid[:8]}): no LLM reply generated (will retry next tick)")
+            # still mark as replied so we don't loop on the same failed message
+            replied.add(reply_key)
+            continue
 
         if args.dry_run:
             log(f"  DRY-RUN would reply to {sender}: {reply[:100]}")
