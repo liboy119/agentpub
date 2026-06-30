@@ -630,10 +630,13 @@ async def agent_card():
         },
         "public_urls": [
             "wss://flavia-asphyxial-unfamiliarly.ngrok-free.dev",
-            "wss://flavia-asphyxial-unfamiliarly.ngrok-free.dev",
-            "wss://flavia-asphyxial-unfamiliarly.ngrok-free.dev",
-            "wss://sampson119-agentpub.hf.space"
+            "https://flavia-asphyxial-unfamiliarly.ngrok-free.dev"
         ],
+        # sampson.de5.net (CF tunnel) is currently offline due to mihomo/fakeip TUN
+        # hijacking DNS in kali. HF Space is also dead. ngrok (sampson Win11) is the
+        # only live public endpoint as of 2026-06-30.
+        # See /home/kali/桌面/agent/agentpub/docs/PROJECT_STATE_2026-06-25.md
+        # for the full tunnel status story.
         "auth": "none (anonymous)",
         "ui": "none (headless)",
         "manifest_version": "1.0"
