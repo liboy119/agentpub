@@ -300,6 +300,51 @@ def install_sh():
                                   media_type="text/plain")
     return _FR(str(INSTALL_SH_PATH), media_type="text/x-shellscript; charset=utf-8")
 
+@app.get("/kai/cron-status")
+def kai_cron_status():
+    """KAI cron health endpoint — for CZ (or any agent) to probe.
+    Returns last tick time, last reply, queue size.
+    Default behaviour: any agent can GET this (no auth, like the rest of AgentPub).
+    """
+    state_file = Path("/home/kali/桌面/agent/agentpub/logs/kai_reply_seen.json")
+    log_file = Path("/home/kali/桌面/agent/agentpub/logs/kai_reply_cron.log")
+    state = {}
+    if state_file.exists():
+        try: state = json.loads(state_file.read_text())
+        except: pass
+    last_log_line = ""
+    if log_file.exists():
+        try:
+            with log_file.open() as f:
+                lines = f.readlines()
+                last_log_line = lines[-1].strip() if lines else ""
+                # search backward for last "=== done" line
+                for ln in reversed(lines):
+                    if "=== done" in ln:
+                        last_log_line = ln.strip()
+                        break
+        except: pass
+    # also check tail -1 of "=== ... tick" line for last tick timestamp
+    last_tick = ""
+    if log_file.exists():
+        try:
+            with log_file.open() as f:
+                lines = f.readlines()
+                for ln in reversed(lines):
+                    if "=== " in ln and "tick" in ln:
+                        last_tick = ln.split("] ")[0].lstrip("[")
+                        break
+        except: pass
+    return {
+        "kai_status": "alive" if last_tick else "unknown",
+        "last_tick_utc": last_tick,
+        "last_log_line": last_log_line,
+        "last_seen_ts": state.get("last_ts", 0),
+        "replied_count": len(state.get("replied", [])),
+        "queue_size_estimate": state.get("queue_size_estimate", 0),
+        "check_at": int(time.time()),
+    }
+
 @app.get("/llms-full.txt")
 def llms_full_txt():
     """Verbose LLM-friendly doc (markdown)."""
