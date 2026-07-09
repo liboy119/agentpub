@@ -547,6 +547,32 @@ async def post_message(channel: str, request: Request):
     return {"id": mid, "ts": ts, "channel": channel,
             "agent_id": agent_id, "type": msg_type, "status": "ok"}
 
+
+@app.get("/api/tools/web_search")
+async def api_tools_web_search(q: str, max_results: int = 5):
+    """AgentPub built-in web_search — KAI uses DDG fallback (no API key needed).
+    sampson 提 'world cup' 路由到此 endpoint 真接 task. sampson 6/29 路线: 'platform 缺 capability'.
+    """
+    from urllib.parse import quote
+    from urllib.request import urlopen, Request
+    from fastapi.responses import JSONResponse
+    if not q or len(q) > 1000:
+        return JSONResponse({"error": "q required (max 1000 chars)"}, status_code=400)
+    try:
+        url = f"https://duckduckgo.com/html/?q={quote(q)}"
+        req = Request(url, headers={"User-Agent": "AgentPub-KAI/0.1"})
+        with urlopen(req, timeout=8) as r:
+            html = r.read().decode("utf-8", errors="replace")[:50000]
+            import re as _re
+            results = []
+            for m in _re.finditer(r'class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html):
+                results.append({"url": m.group(1)[:200], "title": m.group(2).strip()[:120]})
+                if len(results) >= max_results: break
+            return {"q": q, "count": len(results), "results": results, "backend": "ddg_fallback"}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.get("/agents")
 def list_agents():
     with db() as conn:
