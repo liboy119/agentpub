@@ -168,6 +168,15 @@ except Exception as _crawl_exc:
     print(f"[crawl router init failed] {_crawl_exc}")
     _tb.print_exc()
 
+# 7/13+ KAI web_search v2 (crawl4ai multi-engine)
+try:
+    from server.web_search import router as web_search_router
+    app.include_router(web_search_router)
+except Exception as _ws_exc:
+    import traceback as _tb2
+    print(f"[web_search router init failed] {_ws_exc}")
+    _tb2.print_exc()
+
 # --- B2A 推广 P0: Content Negotiation + robots.txt ---
 
 @app.middleware("http")
@@ -557,31 +566,56 @@ async def post_message(channel: str, request: Request):
             "agent_id": agent_id, "type": msg_type, "status": "ok"}
 
 
-@app.get("/api/tools/web_search")
-async def api_tools_web_search(q: str, max_results: int = 5):
-    """AgentPub built-in web_search — KAI uses DDG fallback (no API key needed).
-    sampson 提 'world cup' 路由到此 endpoint 真接 task. sampson 6/29 路线: 'platform 缺 capability'.
-    """
-    from urllib.parse import quote
-    from urllib.request import urlopen, Request
-    from fastapi.responses import JSONResponse
-    if not q or len(q) > 1000:
-        return JSONResponse({"error": "q required (max 1000 chars)"}, status_code=400)
-    try:
-        url = f"https://duckduckgo.com/html/?q={quote(q)}"
-        req = Request(url, headers={"User-Agent": "AgentPub-KAI/0.1"})
-        with urlopen(req, timeout=8) as r:
-            html = r.read().decode("utf-8", errors="replace")[:50000]
-            import re as _re
-            results = []
-            for m in _re.finditer(r'class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html):
-                results.append({"url": m.group(1)[:200], "title": m.group(2).strip()[:120]})
-                if len(results) >= max_results: break
-            return {"q": q, "count": len(results), "results": results, "backend": "ddg_fallback"}
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+# @app.get("/api/tools/web_search")
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+# async def api_tools_web_search(q: str, max_results: int = 5):
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     """AgentPub built-in web_search — KAI uses DDG fallback (no API key needed).
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     sampson 提 'world cup' 路由到此 endpoint 真接 task. sampson 6/29 路线: 'platform 缺 capability'.
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     """
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     from urllib.parse import quote
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     from urllib.request import urlopen, Request
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     from fastapi.responses import JSONResponse
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     if not q or len(q) > 1000:
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#         return JSONResponse({"error": "q required (max 1000 chars)"}, status_code=400)
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     try:
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#         url = f"https://duckduckgo.com/html/?q={quote(q)}"
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#         req = Request(url, headers={"User-Agent": "AgentPub-KAI/0.1"})
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#         with urlopen(req, timeout=8) as r:
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#             html = r.read().decode("utf-8", errors="replace")[:50000]
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#             import re as _re
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#             results = []
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#             for m in _re.finditer(r'class="result__a"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', html):
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#                 results.append({"url": m.group(1)[:200], "title": m.group(2).strip()[:120]})
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#                 if len(results) >= max_results: break
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#             return {"q": q, "count": len(results), "results": results, "backend": "ddg_fallback"}
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#     except Exception as e:
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+#         return JSONResponse({"error": str(e)}, status_code=500)
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+# 
+# V1 WEB SEARCH DISABLED — v2 in server/web_search.py
+# 
 @app.get("/agents")
 def list_agents():
     with db() as conn:
