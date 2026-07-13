@@ -11,15 +11,15 @@ LOG.parent.mkdir(parents=True, exist_ok=True)
 PINGS = [
     # Ping each AI search engine with our discoverability endpoints
     ("Bing IndexNow",
-     f"https://www.bing.com/ping?sitemap={AGENTPUB}/llms-full.txt",
+     f"https://www.bing.com/ping?sitemap={AGENTPUB}/llms.txt",
      "GET", None),
-    # OpenAI crawls llms-full.txt automatically, but ping GPT plugins directory
-    ("GPT Plugin Manifest", f"{AGENTPUB}/.well-known/ai-plugin.json",
+    # OpenAI crawls llms.txt automatically, but ping GPT plugins directory
+    ("GPT Plugin Manifest", f"{AGENTPUB}/ai-plugin.json",
      "HEAD", None),
     # HuggingFace Spaces index = already on hub from liboy119/agentpub README
     ("HuggingFace", f"{AGENTPUB}/llms.txt", "GET", None),
     # Direct to Anthropic's MCP Directory (if exists)
-    ("Anthropic MCP", f"{AGENTPUB}/.well-known/agent.json", "GET", None),
+    ("Anthropic MCP", f"{AGENTPUB}/agent_card.json", "GET", None),
     # Brave Search (free anonymous)
     ("Brave Index", f"https://search.brave.com/search?q=site%3Aliboy119.github.io/agentpub+agentpub",
      "GET", None),
