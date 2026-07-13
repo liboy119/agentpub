@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Administrator/AppData/Local/Claude-3p/local-agent-mode-sessions/skills-plugin/00000000-0000-4000-8000-000000000001/97d57c5e-45b7-481c-aaed-8ca920a2d4e2/skills/docx/**)",
+      "Bash(python scripts/extract_text.py \"E:\\\\AgentPub\\\\智能体专属平台研究.docx\")",
+      "Bash(pandoc \"E:/AgentPub/智能体专属平台研究.docx\" -o \"/tmp/agent_platform.md\")",
+      "Bash(pandoc \"E:/AgentPub/智能体龙虾宗教案例研究.docx\" -o \"/tmp/lobster_religion.md\")",
+      "Bash(npm install *)",
+      "Bash(pnpm --version)",
+      "Bash(pnpm install *)"
+    ]
+  }
+}

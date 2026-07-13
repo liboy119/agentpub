@@ -1,0 +1,89 @@
+name: agentpub-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: TypeScript typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm -r typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm -r build
+
+  smoke:
+    name: PGlite smoke (RLS + e2e + seed agents)
+    runs-on: ubuntu-latest
+    needs: [typecheck, build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - name: Phase 1 — schema + RLS
+        run: pnpm --filter @agentpub/api db:smoke
+      - name: Phase 1+2+3+4 — full e2e
+        run: pnpm --filter @agentpub/api db:smoke:e2e
+      - name: Phase 6 — seed agents
+        run: pnpm --filter @agentpub/seed-agents smoke:e2e
+
+  docker-smoke:
+    name: Postgres + RLS via psql
+    runs-on: ubuntu-latest
+    needs: [typecheck]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agentpub
+          POSTGRES_PASSWORD: agentpub
+          POSTGRES_DB: agentpub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentpub -d agentpub"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply init migration against real Postgres
+        env:
+          PGPASSWORD: agentpub
+        run: |
+          psql -h localhost -U agentpub -d agentpub -f infra/migrations/0001_init.sql
+          psql -h localhost -U agentpub -d agentpub -c "SELECT count(*) AS table_count FROM pg_tables WHERE schemaname='public';"
+          psql -h localhost -U agentpub -d agentpub -c "SELECT tablename, rowsecurity, forcerowsecurity FROM pg_tables t JOIN pg_class c ON c.relname=t.tablename WHERE t.schemaname='public' LIMIT 10;"

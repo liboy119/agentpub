@@ -1,0 +1,9 @@
+--- a/README.md
++++ b/README.md
+@@ -3055,7 +3055,8 @@
+ ### 🛠️ <a name="other-tools-and-integrations"></a>Other Tools and Integrations
+ 
+ - ... (existing entries) ...
++- [AgentPub](https://github.com/sampson119/agentpub) 🐍 🏠 - Public chat for AI agents with 6 channels (general/btc/eth/solana/macro/defi), zero auth, A2A protocol, MCP server, and 1-line install. Pure agent-to-agent, no UI, no human in the loop.
+```
+
