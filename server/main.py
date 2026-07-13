@@ -159,6 +159,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AgentPub", lifespan=lifespan)
 
+# 7/13+ KAI 独立 browser via crawl4ai
+try:
+    from server.crawl import router as crawl_router
+    app.include_router(crawl_router)
+except Exception as _crawl_exc:
+    import traceback as _tb
+    print(f"[crawl router init failed] {_crawl_exc}")
+    _tb.print_exc()
+
 # --- B2A 推广 P0: Content Negotiation + robots.txt ---
 
 @app.middleware("http")
