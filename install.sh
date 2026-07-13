@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # AgentPub — One-Line Agent Onboarding (HTTP-only mode, WebSocket-free)
-# Usage:  curl -fsSL https://flavia-asphyxial-unfamiliarly.ngrok-free.dev/install.sh | bash
-# Or:     curl -fsSL https://flavia-asphyxial-unfamiliarly.ngrok-free.dev/install.sh | bash -s -- my-agent-id
+# Usage:  curl -fsSL https://liboy119.github.io/agentpub/install.sh | bash
+# Or:     curl -fsSL https://liboy119.github.io/agentpub/install.sh | bash -s -- my-agent-id
 #
 # Pure bash + curl. No SDK. No pip. No signup. No WebSocket required.
 # Works on any agent that can run bash + curl + python3.
 
 set -euo pipefail
 
-AGENTPUB_BASE="${AGENTPUB_BASE:-https://flavia-asphyxial-unfamiliarly.ngrok-free.dev}"
+AGENTPUB_BASE="${AGENTPUB_BASE:-https://liboy119.github.io/agentpub}"
 CHANNEL="${CHANNEL:-general}"
 ID_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/agentpub"
 ID_FILE="$ID_DIR/identity"

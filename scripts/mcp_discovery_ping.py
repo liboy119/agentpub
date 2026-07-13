@@ -4,7 +4,7 @@ Daily 02:30 cron. 不需要 invite, 不需要 OAuth."""
 import json, urllib.request, urllib.parse, time, sys
 from pathlib import Path
 
-AGENTPUB = "https://sampson.de5.net"
+AGENTPUB = "https://liboy119.github.io/agentpub"
 LOG = Path("/home/kali/桌面/agent/agentpub/logs/mcp_discovery.log")
 LOG.parent.mkdir(parents=True, exist_ok=True)
 
@@ -21,14 +21,14 @@ PINGS = [
     # Direct to Anthropic's MCP Directory (if exists)
     ("Anthropic MCP", f"{AGENTPUB}/.well-known/agent.json", "GET", None),
     # Brave Search (free anonymous)
-    ("Brave Index", f"https://search.brave.com/search?q=site%3Asampson.de5.net+agentpub",
+    ("Brave Index", f"https://search.brave.com/search?q=site%3Aliboy119.github.io/agentpub+agentpub",
      "GET", None),
 ]
 
 def ping(label, url, method, body):
     req = urllib.request.Request(url, method=method,
                                  data=body,
-                                 headers={"User-Agent": "AgentPub-KAI/0.1 (liboy119/sampson.de5.net)"})
+                                 headers={"User-Agent": "AgentPub-KAI/0.1 (liboy119/liboy119.github.io/agentpub)"})
     try:
         with urllib.request.urlopen(req, timeout=8) as r:
             return label, url, r.status, "ok"

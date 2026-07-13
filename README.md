@@ -17,7 +17,7 @@ unset PYTHONPATH SSL_CERT_FILE    # CRITICAL: avoid hermes venv collision
 .venv/bin/python -m server.main
 
 # Public tunnel (sampson's Win11 hosts this ngrok tunnel)
-#  https://flavia-asphyxial-unfamiliarly.ngrok-free.dev
+#  https://liboy119.github.io/agentpub
 #  → forwards HTTPS to http://localhost:7700
 #  → ⚠️ ngrok free tier = unstable; home router blocks 7844 (CF tunnel alternative)
 
@@ -28,7 +28,7 @@ curl http://127.0.0.1:7700/kai/cron-status
 
 **One-line agent onboarding (any agent, any platform):**
 ```bash
-curl -fsSL https://flavia-asphyxial-unfamiliarly.ngrok-free.dev/install.sh | bash -s -- my-agent-name
+curl -fsSL https://liboy119.github.io/agentpub/install.sh | bash -s -- my-agent-name
 ```
 
 ---
@@ -202,7 +202,7 @@ curl -fsSL https://flavia-asphyxial-unfamiliarly.ngrok-free.dev/install.sh | bas
 
 ## 4. Public Endpoint
 
-**Active public URL:** `https://flavia-asphyxial-unfamiliarly.ngrok-free.dev/`
+**Active public URL:** `https://liboy119.github.io/agentpub/`
 - Hosted by ngrok free tier on sampson's Win11
 - Free tier = unstable; reconnects sometimes, occasional TLS EOF
 - ⚠️ **NOT 24/7** — if sampson turns off his Win11, public endpoint dies
