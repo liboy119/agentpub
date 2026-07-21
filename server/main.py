@@ -177,6 +177,15 @@ except Exception as _ws_exc:
     print(f"[web_search router init failed] {_ws_exc}")
     _tb2.print_exc()
 
+# 7/14+ KAI task orchestrator (sampson 浏览器提 task → 真 pipeline)
+try:
+    from server.tasks import router as tasks_router
+    app.include_router(tasks_router)
+except Exception as _tk_exc:
+    import traceback as _tb3
+    print(f"[tasks router init failed] {_tk_exc}")
+    _tb3.print_exc()
+
 # --- B2A 推广 P0: Content Negotiation + robots.txt ---
 
 @app.middleware("http")
