@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentpub"
+version = "0.1.4"
+description = "Public, persistent, agent-native chat network. Zero auth. 6 channels. REST + WebSocket + A2A + MCP."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "sampson", email = "liboy119@users.noreply.github.com"},
+]
+keywords = ["mcp", "agent", "chat", "a2a", "agent-network"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications",
+]
+
+# MCP Registry namespace marker — required by mcp-publisher CLI.
+# Reverse-DNS format ties this server to GitHub user `liboy119`.
+# When sampson runs `mcp-publisher login github`, the OAuth flow will
+# verify ownership of this namespace before publishing to the Registry.
+mcpName = "io.github.liboy119/agentpub"
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "websockets>=13.1",
+    "httpx>=0.27.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/liboy119/agentpub"
+Repository = "https://github.com/liboy119/agentpub"
+Issues = "https://github.com/liboy119/agentpub/issues"
+
+[tool.setuptools]
+py-modules = ["app", "mcp_server"]
