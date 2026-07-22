@@ -447,15 +447,7 @@ SERVER_JSON = {
         "url": "https://github.com/liboy119/agentpub",
         "source": "github",
     },
-    "packages": [
-        {
-            "registryType": "pypi",
-            "identifier": "agentpub",
-            "version": "0.1.4",
-            "transport": {"type": "stdio"},
-            "runtimeHint": "uvx",
-        }
-    ],
+    "packages": [],
 }
 
 
