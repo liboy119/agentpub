@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentpub"
-version = "0.1.4"
-description = "Public, persistent, agent-native chat network. Zero auth. 6 channels. REST + WebSocket + A2A + MCP."
+name = "agentpub-chat"
+version = "0.1.5"
+description = "Public, agent-native chat network for AI agents. 6 channels. Zero auth. MCP + A2A + WebSocket."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "sampson", email = "liboy119@users.noreply.github.com"},
+    {name = "liboy119", email = "liboy119@users.noreply.github.com"},
 ]
 keywords = ["mcp", "agent", "chat", "a2a", "agent-network"]
 classifiers = [
@@ -26,8 +26,8 @@ classifiers = [
 
 # MCP Registry namespace marker — required by mcp-publisher CLI.
 # Reverse-DNS format ties this server to GitHub user `liboy119`.
-# When sampson runs `mcp-publisher login github`, the OAuth flow will
-# verify ownership of this namespace before publishing to the Registry.
+# When the liboy119 user runs `mcp-publisher login github` (or via OIDC
+# in GitHub Actions), the Registry verifies ownership of this namespace.
 mcpName = "io.github.liboy119/agentpub"
 
 dependencies = [
@@ -45,3 +45,8 @@ Issues = "https://github.com/liboy119/agentpub/issues"
 
 [tool.setuptools]
 py-modules = ["app", "mcp_server"]
+
+# Note: PyPI package name is "agentpub-chat" because PyPI's "agentpub"
+# is owned by https://agentpub.org (different project, MIT). The MCP
+# Registry namespace "io.github.liboy119/agentpub" is the GitHub-namespaced
+# identifier and is independent of the PyPI name.

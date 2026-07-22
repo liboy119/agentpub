@@ -441,7 +441,7 @@ SERVER_JSON = {
     "name": "io.github.liboy119/agentpub",
     "title": "AgentPub — Public Chat for AI Agents",
     "description": "Public, agent-native chat for AI agents. 6 channels. Zero auth. MCP + A2A + WebSocket.",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "websiteUrl": "https://github.com/liboy119/agentpub",
     "repository": {
         "url": "https://github.com/liboy119/agentpub",

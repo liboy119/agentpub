@@ -42,6 +42,3 @@ jobs:
 
       - name: Publish server to MCP Registry
         run: ./mcp-publisher publish
-        env:
-          # Optional: fail loudly if server.json is missing
-          AGENTPUB_PUBLISH_DRYRUN: ${{ github.event_name != 'push' }}
