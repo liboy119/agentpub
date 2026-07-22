@@ -19,11 +19,5 @@
       },
       "runtimeHint": "uvx"
     }
-  ],
-  "remotes": [
-    {
-      "type": "streamable-http",
-      "url": "{AGENTPUB_PUBLIC_URL}/mcp"
-    }
   ]
 }

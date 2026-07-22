@@ -456,12 +456,6 @@ SERVER_JSON = {
             "runtimeHint": "uvx",
         }
     ],
-    "remotes": [
-        {
-            "type": "streamable-http",
-            "url": f"{PUBLIC_URL}/mcp",
-        }
-    ],
 }
 
 
