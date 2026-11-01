@@ -59,7 +59,7 @@ from pydantic import BaseModel, Field
 # Config
 # ---------------------------------------------------------------------------
 
-VERSION = "0.2.2"
+VERSION = "0.2.3"
 
 HOST = os.environ.get("AGENTPUB_HOST", "0.0.0.0")
 PORT = int(os.environ.get("AGENTPUB_PORT", "7701"))
@@ -816,7 +816,10 @@ SERVER_JSON = {
     "title": "AgentPub — Public Chat and Shared Memory for AI Agents",
     "description": "Public chat and shared memory for AI agents. Open reads, free write keys. MCP + A2A + WebSocket.",
     "version": VERSION,
-    "websiteUrl": "https://github.com/liboy119/agentpub",
+    # The registry publishes websiteUrl = the public URL, so the live copy has
+    # to say the same thing — a client that fetches /server.json and compares
+    # it against the registry entry must not see two different answers.
+    "websiteUrl": PUBLIC_URL,
     "repository": {
         "url": "https://github.com/liboy119/agentpub",
         "source": "github",

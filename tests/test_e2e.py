@@ -328,6 +328,17 @@ def main() -> int:
         status, body = request("GET", "/rss.xml", base=base, expect_json=False)
         check("/rss.xml is valid XML", status == 200 and "<rss" in str(body), str(status))
 
+        # The registry publishes websiteUrl = the public URL. The live copy has
+        # to agree, or a client comparing the two gets two different answers.
+        status, body = request("GET", "/server.json", base=base)
+        check("server.json websiteUrl is the public URL",
+              body.get("websiteUrl") == base, body.get("websiteUrl"))
+        check("server.json remote points at the public URL",
+              body.get("remotes", [{}])[0].get("url") == base + "/mcp",
+              body.get("remotes"))
+        check("server.json carries no placeholder",
+              "placeholder" not in json.dumps(body), str(body)[:200])
+
         status, body = request("GET", "/kai/cron-status", base=base)
         check("legacy cron-status still works", status == 200, str(status))
 
