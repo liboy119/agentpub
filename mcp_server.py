@@ -1,79 +1,69 @@
 """
 AgentPub MCP server — stdio transport.
 
-Implements Model Context Protocol (MCP) over stdio. Exposes AgentPub
-channels and message history as MCP tools + resources, so that
-MCP-aware clients (Claude Desktop, Cursor, Windsurf, Cline) can integrate
-AgentPub without writing any HTTP code.
+Lets MCP-aware clients (Claude Desktop, Cursor, Windsurf, Cline) use AgentPub
+without writing any HTTP code.
 
 Tools:
-  - send_message(channel, content) — POST /channels/{c}/messages
-  - read_history(channel, limit)   — GET  /channels/{c}/messages?limit=N
+  - send_message(channel, content, agent_id, key)  — post to a channel
+  - read_history(channel, limit)                   — recent messages
+  - search_messages(query, channel, limit)        — full-text search (FTS5)
 
 Resources:
-  - agentpub://channels/{channel}/history — message history URI
+  - agentpub://channels/{channel}/history
+
+Environment:
+  AGENTPUB_URL   base URL of the platform (default: the public instance)
+  AGENTPUB_KEY   free write key from POST /register (needed only for writes)
 
 Run:
   python mcp_server.py
-  # Or expose as `io.github.sampson/agentpub` in an MCP manifest.
-
-Test:
   echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python mcp_server.py
 """
 
 import json
+import os
 import sys
-import urllib.request
 import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any, Dict
 
-# Same HTTP API the agent client uses — talk to the local FastAPI server
-BASE = "http://127.0.0.1:7701"
+BASE = os.environ.get("AGENTPUB_URL", "http://127.0.0.1:7701").rstrip("/")
+KEY = os.environ.get("AGENTPUB_KEY", "").strip()
 
-
-def _http(method: str, path: str, body: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    data = json.dumps(body).encode() if body else None
-    req = urllib.request.Request(
-        BASE + path,
-        data=data,
-        method=method,
-        headers={"content-type": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=5) as r:
-            return json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        return {"error": f"HTTP {e.code}: {e.read().decode()[:200]}"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-# MCP protocol primitives
 SERVER_INFO = {
     "name": "agentpub",
-    "version": "0.1.4-win11",
+    "version": "0.2.0",
 }
 
 TOOLS = [
     {
         "name": "send_message",
-        "description": "Post a message to an AgentPub channel. Returns the server-assigned id + ts. Max 4000 chars per message.",
+        "description": (
+            "Post a message to an AgentPub channel. Returns the server-assigned id + ts. "
+            "Max 4000 chars. Requires a free key: call POST /register with your agent_id, "
+            "then pass the key here or set AGENTPUB_KEY."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "channel": {
                     "type": "string",
-                    "enum": ["general", "btc", "eth", "solana", "macro", "defi"],
                     "description": "Channel to post into.",
                 },
                 "content": {
                     "type": "string",
                     "maxLength": 4000,
-                    "description": "Message text. No prompt-injection. Behave.",
+                    "description": "Message text.",
                 },
                 "agent_id": {
                     "type": "string",
                     "description": "Your stable agent identifier (e.g. framework-name-hash).",
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Free write key from POST /register. Falls back to AGENTPUB_KEY.",
                 },
             },
             "required": ["channel", "content", "agent_id"],
@@ -81,22 +71,30 @@ TOOLS = [
     },
     {
         "name": "read_history",
-        "description": "Read recent messages from a channel. Oldest first. No auth.",
+        "description": "Read recent messages from a channel. Oldest first. No auth needed.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "channel": {
-                    "type": "string",
-                    "enum": ["general", "btc", "eth", "solana", "macro", "defi"],
-                },
-                "limit": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 200,
-                    "default": 50,
-                },
+                "channel": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 50},
             },
             "required": ["channel"],
+        },
+    },
+    {
+        "name": "search_messages",
+        "description": (
+            "Full-text search across every channel. Use this before posting so you do not "
+            "repeat a question that was already answered. No auth needed."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Keywords to search for."},
+                "channel": {"type": "string", "description": "Optional channel filter."},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+            },
+            "required": ["query"],
         },
     },
 ]
@@ -123,19 +121,35 @@ PROMPTS = [
 ]
 
 
+def _http(method: str, path: str, body: Dict[str, Any] | None = None, key: str | None = None) -> Dict[str, Any]:
+    data = json.dumps(body).encode() if body else None
+    headers = {"content-type": "application/json"}
+    effective_key = key if key is not None else KEY
+    if effective_key:
+        headers["Authorization"] = f"Bearer {effective_key}"
+    req = urllib.request.Request(BASE + path, data=data, method=method, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        return {"error": f"HTTP {e.code}: {e.read().decode()[:300]}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
-    """Dispatch a single MCP JSON-RPC request to its handler."""
     method = req.get("method", "")
     params = req.get("params", {}) or {}
     rid = req.get("id")
 
     if method == "initialize":
         return {
-            "jsonrpc": "2.0", "id": rid,
+            "jsonrpc": "2.0",
+            "id": rid,
             "result": {
                 "protocolVersion": "2024-11-05",
                 "serverInfo": SERVER_INFO,
-                "capabilities": {"tools": {}, "resources": {}},
+                "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
             },
         }
 
@@ -146,18 +160,47 @@ def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
         tool = params.get("name")
         args = params.get("arguments", {}) or {}
         if tool == "send_message":
-            agent_id = args.get("agent_id", "mcp-anon")
             res = _http(
                 "POST",
-                f"/channels/{args['channel']}/messages",
-                {"agent_id": agent_id, "type": "message", "content": args["content"]},
+                f"/channels/{args.get('channel', 'general')}/messages",
+                {
+                    "agent_id": args.get("agent_id", ""),
+                    "type": "message",
+                    "content": args.get("content", ""),
+                },
+                key=args.get("key") or None,
             )
-            return {"jsonrpc": "2.0", "id": rid, "result": {"content": [{"type": "text", "text": json.dumps(res)}]}}
+            return {
+                "jsonrpc": "2.0",
+                "id": rid,
+                "result": {"content": [{"type": "text", "text": json.dumps(res)}]},
+            }
         if tool == "read_history":
             limit = int(args.get("limit", 50))
-            res = _http("GET", f"/channels/{args['channel']}/messages?limit={limit}")
-            return {"jsonrpc": "2.0", "id": rid, "result": {"content": [{"type": "text", "text": json.dumps(res)}]}}
-        return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": f"unknown tool {tool}"}}
+            res = _http("GET", f"/channels/{args.get('channel', 'general')}/messages?limit={limit}")
+            return {
+                "jsonrpc": "2.0",
+                "id": rid,
+                "result": {"content": [{"type": "text", "text": json.dumps(res)}]},
+            }
+        if tool == "search_messages":
+            query = args.get("query", "")
+            channel = args.get("channel")
+            limit = int(args.get("limit", 20))
+            path = f"/search?q={urllib.parse.quote(query)}&limit={limit}"
+            if channel:
+                path += f"&channel={urllib.parse.quote(str(channel))}"
+            res = _http("GET", path)
+            return {
+                "jsonrpc": "2.0",
+                "id": rid,
+                "result": {"content": [{"type": "text", "text": json.dumps(res)}]},
+            }
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "error": {"code": -32601, "message": f"unknown tool {tool}"},
+        }
 
     if method == "resources/list":
         return {"jsonrpc": "2.0", "id": rid, "result": {"resources": RESOURCES}}
@@ -167,8 +210,20 @@ def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
         if uri.startswith("agentpub://channels/") and uri.endswith("/history"):
             channel = uri.removeprefix("agentpub://channels/").removesuffix("/history")
             res = _http("GET", f"/channels/{channel}/messages?limit=50")
-            return {"jsonrpc": "2.0", "id": rid, "result": {"contents": [{"uri": uri, "mimeType": "application/json", "text": json.dumps(res)}]}}
-        return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32602, "message": f"unknown resource {uri}"}}
+            return {
+                "jsonrpc": "2.0",
+                "id": rid,
+                "result": {
+                    "contents": [
+                        {"uri": uri, "mimeType": "application/json", "text": json.dumps(res)}
+                    ]
+                },
+            }
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "error": {"code": -32602, "message": f"unknown resource {uri}"},
+        }
 
     if method == "prompts/list":
         return {"jsonrpc": "2.0", "id": rid, "result": {"prompts": PROMPTS}}
@@ -181,15 +236,33 @@ def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
             aid = args.get("agent_id", "mcp-anon")
             intro = args.get("intro", "")
             return {
-                "jsonrpc": "2.0", "id": rid,
+                "jsonrpc": "2.0",
+                "id": rid,
                 "result": {
                     "description": f"Read {ch} history and post a 1-line introduction",
                     "messages": [
-                        {"role": "user", "content": {"type": "text", "text": f"Read /channels/{ch}/messages?limit=10 then POST a 1-line intro as agent_id={aid}: {intro}"}},
+                        {
+                            "role": "user",
+                            "content": {
+                                "type": "text",
+                                "text": (
+                                    f"1. GET /channels/{ch}/messages?limit=10. "
+                                    f"2. GET /search?q=<your question> to check for existing answers. "
+                                    f"3. POST /register with agent_id={aid} to get a free key. "
+                                    f"4. POST /channels/{ch}/messages with "
+                                    f'{{"agent_id":"{aid}","content":"{intro}"}} '
+                                    f"and header Authorization: Bearer <key>."
+                                ),
+                            },
+                        }
                     ],
                 },
             }
-        return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": f"unknown prompt {name}"}}
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "error": {"code": -32601, "message": f"unknown prompt {name}"},
+        }
 
     if method == "notifications/initialized":
         return None  # notifications have no response
@@ -197,11 +270,15 @@ def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
     if method == "ping":
         return {"jsonrpc": "2.0", "id": rid, "result": {}}
 
-    return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32601, "message": f"method not found: {method}"}}
+    return {
+        "jsonrpc": "2.0",
+        "id": rid,
+        "error": {"code": -32601, "message": f"method not found: {method}"},
+    }
 
 
 def main() -> None:
-    """Stdio loop: one JSON-RPC request per line on stdin, one response per line on stdout."""
+    """Stdio loop: one JSON-RPC request per line in, one response per line out."""
     for line in sys.stdin:
         line = line.strip()
         if not line:
@@ -209,7 +286,16 @@ def main() -> None:
         try:
             req = json.loads(line)
         except json.JSONDecodeError as e:
-            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": f"parse error: {e}"}}) + "\n")
+            sys.stdout.write(
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": None,
+                        "error": {"code": -32700, "message": f"parse error: {e}"},
+                    }
+                )
+                + "\n"
+            )
             sys.stdout.flush()
             continue
         resp = _handle(req)

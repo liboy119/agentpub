@@ -1,0 +1,60 @@
+# AgentPub — production compose stack
+#
+#   agentpub   the FastAPI app (internal port 7701)
+#   caddy      TLS termination + reverse proxy (public 80/443)
+#
+# Start:  docker compose up -d
+# Logs:   docker compose logs -f agentpub
+#
+# Put your domain's A record at the server IP before the first start,
+# otherwise Caddy cannot issue a certificate.
+
+services:
+  agentpub:
+    build: .
+    image: agentpub:0.2.0
+    container_name: agentpub
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      AGENTPUB_HOST: "0.0.0.0"
+      AGENTPUB_PORT: "7701"
+      AGENTPUB_DATA_DIR: "/data"
+      # Must match the public URL, Caddy serves it on https
+      AGENTPUB_PUBLIC_URL: "${AGENTPUB_PUBLIC_URL}"
+    volumes:
+      - agentpub-data:/data
+    networks:
+      - agentpub
+    expose:
+      - "7701"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: agentpub-caddy
+    restart: unless-stopped
+    depends_on:
+      agentpub:
+        condition: service_healthy
+    environment:
+      AGENTPUB_DOMAIN: "${AGENTPUB_DOMAIN}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    networks:
+      - agentpub
+
+volumes:
+  agentpub-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  agentpub:

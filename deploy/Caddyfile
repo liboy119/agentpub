@@ -1,0 +1,40 @@
+# AgentPub — Caddy reverse proxy
+#
+# Caddy provisions and renews the TLS certificate automatically.
+# Requirements:
+#   * the domain's A/AAAA record must point at this server's public IP
+#   * ports 80 and 443 must be reachable from the internet
+#
+# The domain is injected from the AGENTPUB_DOMAIN environment variable so the
+# same image works for staging and production.
+
+{
+	email {$ACME_EMAIL:}
+}
+
+{$AGENTPUB_DOMAIN} {
+	encode zstd gzip
+
+	# WebSocket upgrades pass through automatically via reverse_proxy.
+	reverse_proxy agentpub:7701 {
+		health_uri /healthz
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+}
+
+# Plain HTTP is redirected to HTTPS by Caddy automatically.

@@ -1,89 +1,81 @@
+# AgentPub CI — Python, single file, SQLite.
+#
+# Runs the same regression suite that ships in tests/. If this is green, a
+# clean checkout can actually run and post messages — which is exactly what
+# the v0.1.x release could not do.
 name: agentpub-ci
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
 
 jobs:
-  typecheck:
-    name: TypeScript typecheck
+  test:
+    name: End-to-end regression suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
         with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
-      - run: pnpm -r typecheck
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run end-to-end tests
+        run: python tests/test_e2e.py
+      - name: Run shell script integration tests
+        run: python tests/test_install_scripts.py
 
-  build:
-    name: Build
+  serverjson:
+    name: server.json sanity
     runs-on: ubuntu-latest
-    needs: [typecheck]
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
-      - run: pnpm -r build
-
-  smoke:
-    name: PGlite smoke (RLS + e2e + seed agents)
-    runs-on: ubuntu-latest
-    needs: [typecheck, build]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
-      - name: Phase 1 — schema + RLS
-        run: pnpm --filter @agentpub/api db:smoke
-      - name: Phase 1+2+3+4 — full e2e
-        run: pnpm --filter @agentpub/api db:smoke:e2e
-      - name: Phase 6 — seed agents
-        run: pnpm --filter @agentpub/seed-agents smoke:e2e
-
-  docker-smoke:
-    name: Postgres + RLS via psql
-    runs-on: ubuntu-latest
-    needs: [typecheck]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: agentpub
-          POSTGRES_PASSWORD: agentpub
-          POSTGRES_DB: agentpub
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U agentpub -d agentpub"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    steps:
-      - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply init migration against real Postgres
-        env:
-          PGPASSWORD: agentpub
+      - uses: actions/checkout@v5
+      - name: Validate against the registry schema
         run: |
-          psql -h localhost -U agentpub -d agentpub -f infra/migrations/0001_init.sql
-          psql -h localhost -U agentpub -d agentpub -c "SELECT count(*) AS table_count FROM pg_tables WHERE schemaname='public';"
-          psql -h localhost -U agentpub -d agentpub -c "SELECT tablename, rowsecurity, forcerowsecurity FROM pg_tables t JOIN pg_class c ON c.relname=t.tablename WHERE t.schemaname='public' LIMIT 10;"
+          pip install --quiet jsonschema
+          python tests/test_serverjson.py
+
+  syntax:
+    name: Compile check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m compileall -q app.py mcp_server.py tests/
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build image
+        run: docker build -f deploy/Dockerfile -t agentpub:ci .
+      - name: Smoke test the image
+        run: |
+          docker run -d --name agentpub-ci -e AGENTPUB_PUBLIC_URL=http://127.0.0.1:7701 agentpub:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:7701/healthz >/dev/null 2>&1; then
+              echo "container healthy"
+              curl -fsS http://127.0.0.1:7701/healthz && echo
+              docker rm -f agentpub-ci
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "container never became healthy"
+          docker logs agentpub-ci
+          exit 1
+
+  serverjson:
+    name: server.json sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate against the registry schema
+        run: |
+          pip install --quiet jsonschema
+          python tests/test_serverjson.py

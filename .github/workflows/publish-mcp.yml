@@ -1,7 +1,14 @@
-# Publish AgentPub to the official MCP Registry on version tag push.
-# Uses GitHub OIDC (no PAT secret required) so sampson stays 0-intervention:
-# just `git tag v0.1.4 && git push origin v0.1.4` triggers this workflow.
-# Once published, glama.ai / mcp.so / smithery / pulse MCP auto-pull within ~1h.
+# Publish AgentPub to the official MCP Registry.
+#
+# Trigger: push a version tag (git tag v0.2.0 && git push origin v0.2.0).
+# Auth: GitHub OIDC — no PAT secret required.
+#
+# The registry entry is the distribution channel that matters: glama.ai,
+# mcp.so, smithery and pulse all auto-pull it within about an hour.
+#
+# Before the first publish, set the repository variable:
+#   Settings -> Secrets and variables -> Actions -> Variables
+#   AGENTPUB_PUBLIC_URL = https://your-domain.example
 name: Publish to MCP Registry
 
 on:
@@ -9,25 +16,71 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 0.2.0)'
+        required: true
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # Required for OIDC auth to MCP Registry
+      id-token: write   # required for OIDC auth to the MCP Registry
       contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      # Optional: bump version in server.json from the tag (e.g. v1.2.3 -> "1.2.3")
-      # Currently we keep version static in server.json because it doubles as the
-      # PyPI package version; if PyPI ever lags behind, switch to this dynamic version.
-      # - name: Set version in server.json
-      #   run: |
-      #     VERSION="${GITHUB_REF#refs/tags/v}"
-      #     jq --arg v "$VERSION" '.version = $v' server.json > server.tmp && mv server.tmp server.json
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "publishing version $VERSION"
+
+      - name: Resolve public URL
+        id: url
+        run: |
+          URL="${{ vars.AGENTPUB_PUBLIC_URL }}"
+          if [ -z "$URL" ]; then
+            echo "::error::repository variable AGENTPUB_PUBLIC_URL is not set."
+            echo "Set it to the live https URL of the platform, e.g. https://agentpub.example"
+            exit 1
+          fi
+          URL="${URL%/}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "public url: $URL"
+
+      - name: Build server.json
+        run: |
+          jq --arg v "${{ steps.ver.outputs.version }}" \
+             --arg u "${{ steps.url.outputs.url }}" \
+             '.version = $v | .websiteUrl = $u | .remotes[0].url = ($u + "/mcp")' \
+             server.json > server.built.json
+          mv server.built.json server.json
+          cat server.json
+
+      - name: Validate server.json against the registry schema
+        run: |
+          pip install --quiet jsonschema
+          python - <<'PY'
+          import json, urllib.request
+          import jsonschema
+          schema = json.load(urllib.request.urlopen(
+              "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"))
+          doc = json.load(open("server.json"))
+          jsonschema.validate(doc, schema)
+          assert "placeholder.agentpub.invalid" not in json.dumps(doc), \
+              "the public URL placeholder was not substituted — did you set AGENTPUB_PUBLIC_URL?"
+          assert doc["remotes"], "remotes must not be empty"
+          assert doc["remotes"][0]["url"].startswith("https://"), "remote url must be https"
+          print("server.json is schema-valid:", doc["remotes"][0]["url"])
+          PY
 
       - name: Install mcp-publisher
         run: |
@@ -37,8 +90,8 @@ jobs:
           chmod +x mcp-publisher
           ./mcp-publisher --version
 
-      - name: Authenticate to MCP Registry (OIDC, no secret needed)
+      - name: Authenticate (OIDC, no secret needed)
         run: ./mcp-publisher login github-oidc
 
-      - name: Publish server to MCP Registry
+      - name: Publish
         run: ./mcp-publisher publish

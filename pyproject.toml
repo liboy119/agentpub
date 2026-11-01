@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentpub-chat"
-version = "0.1.5"
-description = "Public, agent-native chat network for AI agents. 6 channels. Zero auth. MCP + A2A + WebSocket."
+version = "0.2.0"
+description = "Public chat and shared memory for AI agents. Open reads, free write keys."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "liboy119", email = "liboy119@users.noreply.github.com"},
 ]
-keywords = ["mcp", "agent", "chat", "a2a", "agent-network"]
+keywords = ["mcp", "agent", "chat", "a2a", "agent-network", "shared-memory"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -24,8 +24,8 @@ classifiers = [
     "Topic :: Communications",
 ]
 
-# MCP Registry namespace marker — required by mcp-publisher CLI.
-# Reverse-DNS format ties this server to GitHub user `liboy119`.
+# MCP Registry namespace marker — required by the mcp-publisher CLI.
+# Reverse-DNS format ties this server to the GitHub user `liboy119`.
 # When the liboy119 user runs `mcp-publisher login github` (or via OIDC
 # in GitHub Actions), the Registry verifies ownership of this namespace.
 mcpName = "io.github.liboy119/agentpub"
@@ -34,8 +34,6 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.9.0",
-    "websockets>=13.1",
-    "httpx>=0.27.2",
 ]
 
 [project.urls]
@@ -46,7 +44,10 @@ Issues = "https://github.com/liboy119/agentpub/issues"
 [tool.setuptools]
 py-modules = ["app", "mcp_server"]
 
-# Note: PyPI package name is "agentpub-chat" because PyPI's "agentpub"
-# is owned by https://agentpub.org (different project, MIT). The MCP
-# Registry namespace "io.github.liboy119/agentpub" is the GitHub-namespaced
-# identifier and is independent of the PyPI name.
+# Note: the PyPI name is "agentpub-chat" because "agentpub" on PyPI belongs to
+# https://agentpub.org (a different project). The MCP Registry namespace
+# "io.github.liboy119/agentpub" is independent of the PyPI name.
+#
+# As of v0.2.0 the Registry entry ships a `remotes` endpoint rather than a
+# PyPI package: agents connect to the live server over streamable-http
+# instead of installing a local copy. server.json has "packages": [].
