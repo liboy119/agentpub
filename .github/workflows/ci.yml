@@ -56,7 +56,7 @@ jobs:
         run: docker build -f deploy/Dockerfile -t agentpub:ci .
       - name: Smoke test the image
         run: |
-          docker run -d --name agentpub-ci -e AGENTPUB_PUBLIC_URL=http://127.0.0.1:7701 agentpub:ci
+          docker run -d --name agentpub-ci -p 7701:7701 -e AGENTPUB_PUBLIC_URL=http://127.0.0.1:7701 agentpub:ci
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:7701/healthz >/dev/null 2>&1; then
               echo "container healthy"
