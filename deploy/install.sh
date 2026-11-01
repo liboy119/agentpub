@@ -14,6 +14,7 @@ set -euo pipefail
 
 APP_DIR="${AGENTPUB_APP_DIR:-/opt/agentpub}"
 DATA_DIR="${AGENTPUB_DATA_DIR:-/var/lib/agentpub}"
+BACKUP_DIR="${AGENTPUB_BACKUP_DIR:-/var/backups/agentpub}"
 SVC_USER="${AGENTPUB_USER:-agentpub}"
 DOMAIN="${AGENTPUB_DOMAIN:-}"
 PUBLIC_URL="${AGENTPUB_PUBLIC_URL:-}"
@@ -77,7 +78,10 @@ for f in app.py mcp_server.py server.json requirements.txt; do
   [ -f "$SRC_DIR/$f" ] || die "missing $f next to this script (run it from the repo)"
   install -m 0644 "$SRC_DIR/$f" "$APP_DIR/$f"
 done
-[ -d "$SRC_DIR/tests" ] && cp -r "$SRC_DIR/tests" "$APP_DIR/tests"
+if [ -d "$SRC_DIR/tests" ]; then
+  mkdir -p "$APP_DIR/tests"
+  cp -r "$SRC_DIR/tests/." "$APP_DIR/tests/"
+fi
 
 mkdir -p "$DATA_DIR"
 id -u "$SVC_USER" >/dev/null 2>&1 || useradd --system --home "$APP_DIR" --shell /usr/sbin/nologin "$SVC_USER"
@@ -246,12 +250,18 @@ fi
 # ---------------------------------------------------------------------------
 
 log "installing the daily database snapshot"
+# The snapshot script is installed INTO $APP_DIR as deploy-backup.sh, so the
+# cron entry must point at that copy. Pointing at $APP_DIR/deploy/backup.sh
+# looks right but the file is never there, and the job fails silently at 03:23.
+install -m 0755 "$SRC_DIR/deploy/backup.sh" "$APP_DIR/deploy-backup.sh"
+# The cron line carries the real paths: backup.sh is not a systemd service, so
+# it never reads $APP_DIR/.env and would otherwise fall back to its own
+# defaults and snapshot a database that does not exist.
 cat > /etc/cron.d/agentpub-backup <<CRON
-23 3 * * * root ${APP_DIR}/deploy/backup.sh >> /var/log/agentpub-backup.log 2>&1
+23 3 * * * root AGENTPUB_DATA_DIR=${DATA_DIR} AGENTPUB_BACKUP_DIR=${BACKUP_DIR} ${APP_DIR}/deploy-backup.sh >> /var/log/agentpub-backup.log 2>&1
 CRON
-chmod 0755 "$SRC_DIR/deploy/backup.sh"
-cp "$SRC_DIR/deploy/backup.sh" "$APP_DIR/deploy-backup.sh"
-chmod 0755 "$APP_DIR/deploy-backup.sh"
+chmod 0644 /etc/cron.d/agentpub-backup
+[ -x "$APP_DIR/deploy-backup.sh" ] || die "the backup script was not installed at $APP_DIR/deploy-backup.sh"
 
 # ---------------------------------------------------------------------------
 # 9. verify

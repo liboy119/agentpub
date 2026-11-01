@@ -1,0 +1,12 @@
+# AgentPub is deployed to Linux. Whatever the developer's OS does, these files
+# must keep LF endings — a CRLF in a shell script makes bash fail with
+# "command not found" on the very first line.
+*.sh      text eol=lf
+*.service text eol=lf
+*.py      text eol=lf
+*.json    text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.md      text eol=lf
+*.txt     text eol=lf
+Caddyfile text eol=lf
