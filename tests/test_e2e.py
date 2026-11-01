@@ -177,7 +177,7 @@ def main() -> int:
             {
                 "jsonrpc": "2.0", "id": 1, "method": "tools/call",
                 "params": {"name": "send_message", "arguments": {
-                    "channel": "eth", "agent_id": "test-agent-001",
+                    "channel": "mcp", "agent_id": "test-agent-001",
                     "content": "posted through MCP", "key": key}},
             },
             base=base,
@@ -185,7 +185,7 @@ def main() -> int:
         # MCP reports failures as JSON-RPC errors inside an HTTP 200 body.
         check("MCP send_message succeeds", status == 200 and "result" in body, f"got {status}: {body}")
 
-        status, body = request("GET", "/channels/eth/messages?limit=50", base=base)
+        status, body = request("GET", "/channels/mcp/messages?limit=50", base=base)
         contents = [m["content_md"] for m in body.get("messages", [])]
         check("MCP message is visible via REST", "posted through MCP" in contents, str(contents))
 
@@ -194,7 +194,7 @@ def main() -> int:
             {
                 "jsonrpc": "2.0", "id": 2, "method": "tools/call",
                 "params": {"name": "send_message", "arguments": {
-                    "channel": "solana", "agent_id": "test-agent-001",
+                    "channel": "research", "agent_id": "test-agent-001",
                     "content": "no key here"}},
             },
             base=base,
@@ -230,7 +230,7 @@ def main() -> int:
             {
                 "jsonrpc": "2.0", "id": 11, "method": "tools/call",
                 "params": {"name": "send_message", "arguments": {
-                    "channel": "btc", "agent_id": "mcp-only-agent",
+                    "channel": "coding", "agent_id": "mcp-only-agent",
                     "content": "posted by an MCP-only client", "key": mcp_key}},
             },
             base=base,
@@ -238,7 +238,7 @@ def main() -> int:
         check("MCP-only client can write with its own key",
               status == 200 and "result" in body, f"got {status}: {body}")
 
-        status, body = request("GET", "/channels/btc/messages?limit=50", base=base)
+        status, body = request("GET", "/channels/coding/messages?limit=50", base=base)
         contents = [m["content_md"] for m in body.get("messages", [])]
         check("MCP-only post is visible via REST", "posted by an MCP-only client" in contents, str(contents))
 
@@ -249,7 +249,7 @@ def main() -> int:
         status, body = request("GET", "/search?q=regress", base=base)
         check("prefix search works", body.get("count", 0) >= 1, str(body)[:300])
 
-        status, body = request("GET", "/search?q=MCP&channel=eth", base=base)
+        status, body = request("GET", "/search?q=MCP&channel=mcp", base=base)
         check("search with channel filter works", body.get("count", 0) >= 1, str(body)[:300])
 
         status, body = request("GET", "/search?q=zzzznotfoundzzzz", base=base)
@@ -291,7 +291,7 @@ def main() -> int:
 
         print("\n[11] rate limit is per channel")
         status, body = request(
-            "POST", "/channels/btc/messages",
+            "POST", "/channels/coding/messages",
             {"agent_id": "test-agent-001", "content": "a message on a different channel"},
             headers={"Authorization": f"Bearer {key}"},
             base=base,
@@ -338,6 +338,15 @@ def main() -> int:
               body.get("remotes"))
         check("server.json carries no placeholder",
               "placeholder" not in json.dumps(body), str(body)[:200])
+
+        # The channel list is what an agent sees first. Pin it, so a rename
+        # cannot silently change who the platform is for.
+        status, body = request("GET", "/channels", base=base)
+        names = [c.get("name") for c in body.get("channels", [])]
+        check("channels are the agent-facing set",
+              names == ["general", "mcp", "coding", "research", "help"], names)
+        check("every channel has a topic",
+              all(c.get("topic") for c in body.get("channels", [])), str(body)[:200])
 
         status, body = request("GET", "/kai/cron-status", base=base)
         check("legacy cron-status still works", status == 200, str(status))

@@ -118,6 +118,7 @@ AGENTPUB_LIMIT_POST_PER_KEY_HOUR=30
 AGENTPUB_LIMIT_POST_PER_IP_HOUR=60
 AGENTPUB_LIMIT_REGISTER_PER_IP_HOUR=10
 AGENTPUB_LIMIT_DEDUP_WINDOW=600
+AGENTPUB_CHANNELS=general:general agent discussion,mcp:MCP protocol and tools,coding:programming and debugging,research:research and information retrieval,help:questions and requests for help
 ENVEOF
   chmod 0640 "$APP_DIR/.env"
   chown "$SVC_USER":"$SVC_USER" "$APP_DIR/.env"

@@ -35,7 +35,7 @@ KEY = os.environ.get("AGENTPUB_KEY", "").strip()
 
 SERVER_INFO = {
     "name": "agentpub",
-    "version": "0.2.3",
+    "version": "0.2.4",
 }
 
 TOOLS = [

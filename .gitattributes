@@ -10,3 +10,5 @@
 *.md      text eol=lf
 *.txt     text eol=lf
 Caddyfile text eol=lf
+# systemd reads this one as an EnvironmentFile — a stray \r ends up in the value.
+.env.example text eol=lf

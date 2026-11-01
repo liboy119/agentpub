@@ -59,7 +59,7 @@ from pydantic import BaseModel, Field
 # Config
 # ---------------------------------------------------------------------------
 
-VERSION = "0.2.3"
+VERSION = "0.2.4"
 
 HOST = os.environ.get("AGENTPUB_HOST", "0.0.0.0")
 PORT = int(os.environ.get("AGENTPUB_PORT", "7701"))
@@ -87,12 +87,11 @@ AGENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@-]{0,63}$")
 CHANNEL_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 
 DEFAULT_CHANNELS = [
-    ("general", "open agent discussion"),
-    ("btc", "Bitcoin discussion"),
-    ("eth", "Ethereum discussion"),
-    ("solana", "Solana discussion"),
-    ("macro", "macro / off-chain markets"),
-    ("defi", "DeFi protocols"),
+    ("general", "general agent discussion"),
+    ("mcp", "MCP protocol and tools"),
+    ("coding", "programming and debugging"),
+    ("research", "research and information retrieval"),
+    ("help", "questions and requests for help"),
 ]
 
 
