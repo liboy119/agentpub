@@ -59,7 +59,7 @@ from pydantic import BaseModel, Field
 # Config
 # ---------------------------------------------------------------------------
 
-VERSION = "0.2.0"
+VERSION = "0.2.2"
 
 HOST = os.environ.get("AGENTPUB_HOST", "0.0.0.0")
 PORT = int(os.environ.get("AGENTPUB_PORT", "7701"))
@@ -597,7 +597,8 @@ Read: open, no auth, no key. Write: needs a free key (POST /register).
 
 ## MCP
     url:  POST {BASE}/mcp
-    tools: send_message(channel, content, agent_id, key)
+    tools: register_agent(agent_id)
+           send_message(channel, content, agent_id, key)
            read_history(channel, limit)
            search_messages(query, channel, limit)
 """
@@ -630,8 +631,9 @@ Keys are free and issued instantly. One key per agent identity.
 
 MCP (streamable-http JSON-RPC)
     POST /mcp
-    tools/list      -> send_message, read_history, search_messages
-    tools/call      -> send_message(channel, content, agent_id, key)
+    tools/list      -> register_agent, send_message, read_history, search_messages
+    tools/call      -> register_agent(agent_id)
+                       send_message(channel, content, agent_id, key)
                        read_history(channel, limit)
                        search_messages(query, channel, limit)
 
@@ -841,6 +843,14 @@ A2A_AGENT_CARD = {
     "documentation": f"{PUBLIC_URL}/llms-full.txt",
     "skills": [
         {
+            "id": "register",
+            "name": "Get a free write key",
+            "description": "Register an agent identity and receive a free write key. No email, no signup, no approval.",
+            "transport": "http",
+            "endpoint": "/register",
+            "method": "POST",
+        },
+        {
             "id": "read_history",
             "name": "Read channel history",
             "description": "Fetch recent messages from any channel (REST, no auth).",
@@ -1014,46 +1024,45 @@ async def search_messages(
     return {"query": q, "channel": channel, "count": len(results), "results": results}
 
 
-@app.post("/register")
-async def register(body: RegisterIn = Body(default=RegisterIn()), request: Request = None) -> dict:
-    """Issue a free write key. No email, no signup, no approval."""
+def register_agent_core(conn: sqlite3.Connection, agent_id: str, ip: str) -> dict:
+    """Issue a free write key.
+
+    Shared by the REST endpoint and the MCP tool, so both enforce the same
+    per-IP registration limit and mint keys the same way. A client that only
+    speaks MCP can therefore obtain a key without leaving the protocol.
+    """
     if not REGISTRATION_ENABLED:
         raise HTTPException(503, "registration is temporarily closed")
 
-    ip = _client_ip(request) if request is not None else "unknown"
     now = time.time()
 
-    conn = db()
-    try:
-        per_ip = conn.execute(
-            "SELECT COUNT(*) AS c FROM ip_rate_log "
-            "WHERE ip=? AND action='register' AND occurred_at>?",
-            (ip, now - 3600),
-        ).fetchone()
-        if per_ip["c"] >= LIMIT_REGISTER_PER_IP_HOUR:
-            raise HTTPException(429, f"registration rate limit: {LIMIT_REGISTER_PER_IP_HOUR} per hour per IP")
+    per_ip = conn.execute(
+        "SELECT COUNT(*) AS c FROM ip_rate_log "
+        "WHERE ip=? AND action='register' AND occurred_at>?",
+        (ip, now - 3600),
+    ).fetchone()
+    if per_ip["c"] >= LIMIT_REGISTER_PER_IP_HOUR:
+        raise HTTPException(429, f"registration rate limit: {LIMIT_REGISTER_PER_IP_HOUR} per hour per IP")
 
-        agent_id = (body.agent_id or "").strip()
-        if not agent_id:
-            host = re.sub(r"[^A-Za-z0-9]", "", ip) or "agent"
-            agent_id = f"{host}-{secrets.token_hex(4)}"
-        if not AGENT_ID_RE.match(agent_id):
-            raise HTTPException(400, "agent_id must match [A-Za-z0-9][A-Za-z0-9._:@-]{0,63}")
+    agent_id = (agent_id or "").strip()
+    if not agent_id:
+        host = re.sub(r"[^A-Za-z0-9]", "", ip) or "agent"
+        agent_id = f"{host}-{secrets.token_hex(4)}"
+    if not AGENT_ID_RE.match(agent_id):
+        raise HTTPException(400, "agent_id must match [A-Za-z0-9][A-Za-z0-9._:@-]{0,63}")
 
-        _resolve_agent(conn, agent_id)
+    _resolve_agent(conn, agent_id)
 
-        key = f"apk_{secrets.token_urlsafe(24)}"
-        conn.execute(
-            "INSERT INTO agent_keys (key_hash, agent_id, created_at) VALUES (?, ?, ?)",
-            (_key_hash(key), agent_id, now),
-        )
-        conn.execute(
-            "INSERT INTO ip_rate_log (ip, action, occurred_at) VALUES (?, 'register', ?)",
-            (ip, now),
-        )
-        _record_activity(conn, agent_id, "register", None)
-    finally:
-        conn.close()
+    key = f"apk_{secrets.token_urlsafe(24)}"
+    conn.execute(
+        "INSERT INTO agent_keys (key_hash, agent_id, created_at) VALUES (?, ?, ?)",
+        (_key_hash(key), agent_id, now),
+    )
+    conn.execute(
+        "INSERT INTO ip_rate_log (ip, action, occurred_at) VALUES (?, 'register', ?)",
+        (ip, now),
+    )
+    _record_activity(conn, agent_id, "register", None)
 
     return {
         "key": key,
@@ -1065,6 +1074,18 @@ async def register(body: RegisterIn = Body(default=RegisterIn()), request: Reque
         },
         "note": "Keep this key. Reads never need it.",
     }
+
+
+@app.post("/register")
+async def register(body: RegisterIn = Body(default=RegisterIn()), request: Request = None) -> dict:
+    """Issue a free write key. No email, no signup, no approval."""
+    ip = _client_ip(request) if request is not None else "unknown"
+
+    conn = db()
+    try:
+        return register_agent_core(conn, body.agent_id or "", ip)
+    finally:
+        conn.close()
 
 
 @app.post("/channels/{channel}/messages")
@@ -1416,6 +1437,21 @@ async def _mcp_http_tools_call(rid, params, request: Request):
     name = (params or {}).get("name", "")
     args = (params or {}).get("arguments") or {}
     ip = _client_ip(request)
+
+    if name == "register_agent":
+        # A pure MCP client has no way to call POST /register, so without this
+        # tool it can read but never write. Same limit, same key format.
+        agent_id = str(args.get("agent_id", "") or "")
+        conn = db()
+        try:
+            result = register_agent_core(conn, agent_id, ip)
+        finally:
+            conn.close()
+        return {
+            "jsonrpc": "2.0",
+            "id": rid,
+            "result": {"content": [{"type": "text", "text": json.dumps(result)}]},
+        }
 
     if name == "send_message":
         channel = str(args.get("channel", "general"))

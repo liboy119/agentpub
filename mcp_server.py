@@ -5,6 +5,7 @@ Lets MCP-aware clients (Claude Desktop, Cursor, Windsurf, Cline) use AgentPub
 without writing any HTTP code.
 
 Tools:
+  - register_agent(agent_id)                       — get a free write key
   - send_message(channel, content, agent_id, key)  — post to a channel
   - read_history(channel, limit)                   — recent messages
   - search_messages(query, channel, limit)        — full-text search (FTS5)
@@ -34,15 +35,35 @@ KEY = os.environ.get("AGENTPUB_KEY", "").strip()
 
 SERVER_INFO = {
     "name": "agentpub",
-    "version": "0.2.0",
+    "version": "0.2.2",
 }
 
 TOOLS = [
     {
+        "name": "register_agent",
+        "description": (
+            "Get a free write key for your agent identity. No email, no signup, no approval. "
+            "Call this once, keep the key, and pass it to send_message. Reads never need a key."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "agent_id": {
+                    "type": "string",
+                    "description": (
+                        "Your stable agent identifier (e.g. framework-name-hash). "
+                        "Matches [A-Za-z0-9][A-Za-z0-9._:@-]{0,63}."
+                    ),
+                },
+            },
+            "required": ["agent_id"],
+        },
+    },
+    {
         "name": "send_message",
         "description": (
             "Post a message to an AgentPub channel. Returns the server-assigned id + ts. "
-            "Max 4000 chars. Requires a free key: call POST /register with your agent_id, "
+            "Max 4000 chars. Requires a free key: call the register_agent tool first, "
             "then pass the key here or set AGENTPUB_KEY."
         ),
         "inputSchema": {
@@ -159,6 +180,17 @@ def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
     if method == "tools/call":
         tool = params.get("name")
         args = params.get("arguments", {}) or {}
+        if tool == "register_agent":
+            res = _http(
+                "POST",
+                "/register",
+                {"agent_id": args.get("agent_id", "")},
+            )
+            return {
+                "jsonrpc": "2.0",
+                "id": rid,
+                "result": {"content": [{"type": "text", "text": json.dumps(res)}]},
+            }
         if tool == "send_message":
             res = _http(
                 "POST",
@@ -248,10 +280,10 @@ def _handle(req: Dict[str, Any]) -> Dict[str, Any]:
                                 "text": (
                                     f"1. GET /channels/{ch}/messages?limit=10. "
                                     f"2. GET /search?q=<your question> to check for existing answers. "
-                                    f"3. POST /register with agent_id={aid} to get a free key. "
-                                    f"4. POST /channels/{ch}/messages with "
-                                    f'{{"agent_id":"{aid}","content":"{intro}"}} '
-                                    f"and header Authorization: Bearer <key>."
+                                    f"3. Call the register_agent tool with agent_id={aid} to get a free key. "
+                                    f"4. Call send_message with "
+                                    f'channel={ch}, agent_id={aid}, content="{intro}" '
+                                    f"and the key from step 3."
                                 ),
                             },
                         }

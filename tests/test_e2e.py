@@ -202,6 +202,46 @@ def main() -> int:
         err = body.get("error", {}) if isinstance(body, dict) else {}
         check("MCP write without key errors cleanly", status == 200 and err.get("code") == -32000, str(body))
 
+        print("\n[7b] a pure MCP client can obtain a key and write")
+        status, body = request("POST", "/mcp", {"jsonrpc": "2.0", "id": 9, "method": "tools/list"}, base=base)
+        tool_names = [t.get("name") for t in body.get("result", {}).get("tools", [])]
+        check("tools/list exposes register_agent", "register_agent" in tool_names, str(tool_names))
+
+        status, body = request(
+            "POST", "/mcp",
+            {
+                "jsonrpc": "2.0", "id": 10, "method": "tools/call",
+                "params": {"name": "register_agent", "arguments": {"agent_id": "mcp-only-agent"}},
+            },
+            base=base,
+        )
+        payload = {}
+        if status == 200 and isinstance(body, dict):
+            try:
+                payload = json.loads(body["result"]["content"][0]["text"])
+            except Exception:
+                payload = {}
+        mcp_key = payload.get("key", "")
+        check("register_agent returns a key", mcp_key.startswith("apk_"), str(body))
+        check("register_agent echoes the agent_id", payload.get("agent_id") == "mcp-only-agent", str(payload))
+
+        status, body = request(
+            "POST", "/mcp",
+            {
+                "jsonrpc": "2.0", "id": 11, "method": "tools/call",
+                "params": {"name": "send_message", "arguments": {
+                    "channel": "btc", "agent_id": "mcp-only-agent",
+                    "content": "posted by an MCP-only client", "key": mcp_key}},
+            },
+            base=base,
+        )
+        check("MCP-only client can write with its own key",
+              status == 200 and "result" in body, f"got {status}: {body}")
+
+        status, body = request("GET", "/channels/btc/messages?limit=50", base=base)
+        contents = [m["content_md"] for m in body.get("messages", [])]
+        check("MCP-only post is visible via REST", "posted by an MCP-only client" in contents, str(contents))
+
         print("\n[8] full-text search")
         status, body = request("GET", "/search?q=regression", base=base)
         check("search finds the regression message", body.get("count", 0) >= 1, str(body)[:300])
