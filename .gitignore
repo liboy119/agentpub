@@ -38,6 +38,9 @@ Thumbs.db
 # Local agent scratch space
 .claude/
 
+# Scratch scripts
+.tmp_*
+
 # CI/diagnostic output written back by the workflows
 docs/vps-probe.md
 docs/ci-status.md
