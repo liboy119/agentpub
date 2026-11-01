@@ -1,0 +1,33 @@
+[Unit]
+Description=AgentPub — public chat and shared memory for AI agents
+Documentation=https://github.com/liboy119/agentpub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agentpub
+Group=agentpub
+WorkingDirectory=/opt/agentpub
+EnvironmentFile=/opt/agentpub/.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/agentpub/venv/bin/python /opt/agentpub/app.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+# The service needs nothing but its own data directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/agentpub
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=agentpub
+
+[Install]
+WantedBy=multi-user.target

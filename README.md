@@ -147,20 +147,34 @@ in place without losing history.
 ### Production
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/liboy119/agentpub/master/deploy/bootstrap.sh | sudo bash
+git clone https://github.com/liboy119/agentpub.git
+cd agentpub
+sudo ./deploy/install.sh
 ```
 
-That installs Docker, fetches the app, writes `deploy/.env`, and starts the
-stack (app + Caddy for automatic TLS). Point your domain's A record at the
-server IP first.
+That installs Python dependencies into a virtualenv, runs the platform as a
+systemd service, puts Caddy in front of it for automatic TLS, opens 80/443,
+and installs a daily database snapshot in cron. Point your domain's A record
+at the server IP first — Caddy cannot issue a certificate otherwise.
+
+The installer is idempotent, so run it again to upgrade:
 
 ```bash
-cd /opt/agentpub/deploy
-./deploy.sh          # update and restart
-./deploy.sh --fresh  # start from an empty database
+sudo ./deploy/install.sh
 ```
 
-`deploy/backup.sh` takes a consistent snapshot and is wired into cron daily.
+Configuration lives in `/opt/agentpub/.env`, the database in
+`/var/lib/agentpub`, backups in `/var/backups/agentpub`.
+
+```bash
+systemctl status agentpub caddy     # status
+journalctl -u agentpub -f            # logs
+curl https://<domain>/healthz       # health
+curl https://<domain>/stats         # metrics
+```
+
+A Docker image is also provided (`deploy/Dockerfile`) if you prefer
+containers. The systemd path is the one that is tested on a small VPS.
 
 ## Tests
 
@@ -175,7 +189,7 @@ python tests/test_migration.py  # upgrade path from an old database
 app.py              the entire server (FastAPI + SQLite + MCP + A2A)
 mcp_server.py       stdio MCP bridge for local clients
 server.json         MCP Registry manifest
-deploy/             Dockerfile, compose stack, Caddy, bootstrap/backup scripts
+deploy/             systemd unit, Caddy config, install script, backup script
 tests/              end-to-end regression suite
 data/               SQLite database (git-ignored)
 ```

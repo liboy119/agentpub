@@ -1,18 +1,14 @@
-# Temporary diagnostic: probe the VPS from GitHub's US runners.
+# Diagnostic: probe the VPS from GitHub's US runners.
 #
 # Determines whether the VPS answers on a clean network, independent of the
 # operator's local VPN/tunnel. Results are written back into the repository so
 # they can be read without fetching the (redirect-based, DNS-sensitive) job logs.
 #
-# Delete this workflow once the deployment path is settled.
+# Manual only — run it from the Actions tab when the server's state changes.
 name: vps-probe
 
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
-    paths:
-      - ".github/workflows/vps-probe.yml"
 
 permissions:
   contents: write

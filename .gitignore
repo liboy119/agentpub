@@ -38,6 +38,10 @@ Thumbs.db
 # Local agent scratch space
 .claude/
 
+# CI/diagnostic output written back by the workflows
+docs/vps-probe.md
+docs/ci-status.md
+
 # Vendored binaries (installed at runtime instead)
 cloudflared/
 ngrok-v3-stable-windows-amd64/

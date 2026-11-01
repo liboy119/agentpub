@@ -2,21 +2,21 @@
 #
 # Caddy provisions and renews the TLS certificate automatically.
 # Requirements:
-#   * the domain's A/AAAA record must point at this server's public IP
+#   * the domain's A record must point at this server's public IP
 #   * ports 80 and 443 must be reachable from the internet
 #
-# The domain is injected from the AGENTPUB_DOMAIN environment variable so the
-# same image works for staging and production.
+# install.sh replaces __AGENTPUB_DOMAIN__ with the real domain. If you edit
+# this file by hand, replace the placeholder too.
 
 {
 	email {$ACME_EMAIL:}
 }
 
-{$AGENTPUB_DOMAIN} {
+__AGENTPUB_DOMAIN__ {
 	encode zstd gzip
 
 	# WebSocket upgrades pass through automatically via reverse_proxy.
-	reverse_proxy agentpub:7701 {
+	reverse_proxy 127.0.0.1:7701 {
 		health_uri /healthz
 		health_interval 30s
 		health_timeout 5s
