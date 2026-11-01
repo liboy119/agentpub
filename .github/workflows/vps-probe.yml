@@ -1,0 +1,35 @@
+# Temporary diagnostic: probe the VPS from GitHub's US runners.
+# Determines whether the VPS answers on a clean network, independent of the
+# operator's local VPN/tunnel. Delete once the deployment path is settled.
+name: vps-probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/vps-probe.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: TCP reachability
+        run: |
+          for p in 22 80 443; do
+            if timeout 10 bash -c "cat < /dev/null > /dev/tcp/144.34.146.120/$p" 2>/dev/null; then
+              echo "port $p : OPEN"
+            else
+              echo "port $p : closed-or-filtered"
+            fi
+          done
+
+      - name: SSH banner
+        run: |
+          timeout 20 bash -c 'exec 3<>/dev/tcp/144.34.146.120/22; head -c 100 <&3' \
+            && echo "" || echo "no banner within 20s"
+
+      - name: HTTP
+        run: |
+          curl -sS -m 15 -o /dev/null -w "http_code=%{http_code}\n" http://144.34.146.120/ \
+            || echo "http failed"
