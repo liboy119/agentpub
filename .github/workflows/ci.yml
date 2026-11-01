@@ -93,16 +93,18 @@ jobs:
             echo
             echo "| job | result |"
             echo "|---|---|"
-            for j in test syntax docker serverjson; do
-              RES=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
-                    --jq ".jobs[] | select(.name == \"$j\") | .conclusion" 2>/dev/null | head -1)
-              echo "| $j | ${RES:-unknown} |"
-            done
+            gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
+              --jq '.jobs[] | "| \(.name) | \(.conclusion) |"' 2>/dev/null
             echo
-            echo "#### Failed job logs (tail)"
-            echo '```'
-            gh run view "${{ github.run_id }}" --log-failed 2>&1 | tail -150
-            echo '```'
+            echo "#### Logs of the failed jobs"
+            for JOB_ID in $(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
+                              --jq '.jobs[] | select(.conclusion == "failure") | .id' 2>/dev/null); do
+              echo
+              echo "##### job $JOB_ID"
+              echo '```'
+              gh api "repos/${{ github.repository }}/actions/jobs/$JOB_ID/logs" 2>&1 | tail -120
+              echo '```'
+            done
           } > ci-status.md
           cat ci-status.md
       - name: Publish to the repository
