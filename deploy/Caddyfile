@@ -5,12 +5,9 @@
 #   * the domain's A record must point at this server's public IP
 #   * ports 80 and 443 must be reachable from the internet
 #
-# install.sh replaces __AGENTPUB_DOMAIN__ with the real domain. If you edit
-# this file by hand, replace the placeholder too.
-
-{
-	email {$ACME_EMAIL:}
-}
+# install.sh replaces __AGENTPUB_DOMAIN__ with the real domain and prepends the
+# global options block (the ACME contact address). If you edit this file by
+# hand, replace the placeholder too.
 
 __AGENTPUB_DOMAIN__ {
 	encode zstd gzip
